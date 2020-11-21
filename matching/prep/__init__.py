@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 22 13:54:43 2020
 
-@author: abrefeld
-"""
+
+# Copyright (C) 2020 Alexander Brefeld
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -23,7 +36,31 @@ from collections import defaultdict
 from shutil import move
 import datetime as dt
 
-def func():
+
+def get_paths(os_type='mac'):
+    # file paths within /paper_author_similarity
+    abstr_learning_path = '../../learning_abstracts/'
+
+    
+    abstr_paths = []
+    fac_index = []
+    with os.scandir(abstr_learning_path) as it:
+        i = 0
+        for entry in it:
+            if not entry.name.startswith('.') and entry.is_file() and entry.name.endswith('.txt'):
+                abstr_paths.append(entry.path)
+                parts = entry.name.split(' ')
+                last = parts[1]
+                name = '{} {}'.format(parts[0], last).title()
+                fac_index.append([i, name])
+                i += 1
+    fac_dict = dict(fac_index)
+
+def gen_dict_corpus():
+    """Reads all learning abstracts and creates 1 dictionary and 3 separate corpora."""
+    
+    abstr_paths
+    
     # common word list
     stop_words = set(stopwords.words('english'))
     ps = PorterStemmer()

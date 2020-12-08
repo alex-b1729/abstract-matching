@@ -141,6 +141,3 @@ cython_debug/
 .DS_Store
 
 # project data files
-learning_abstracts/*
-corpora/*
-dictionaries/*

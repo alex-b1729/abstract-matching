@@ -28,6 +28,7 @@ import string
 import os
 import numpy as np
 import re
+import hashlib
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import percentileofscore
 import pandas as pd
@@ -56,11 +57,8 @@ def get_paths(os_type='mac'):
                 i += 1
     fac_dict = dict(fac_index)
 
-def gen_dict_corpus():
+def gen_dict_corpus(abstr_paths):
     """Reads all learning abstracts and creates 1 dictionary and 3 separate corpora."""
-    
-    abstr_paths
-    
     # common word list
     stop_words = set(stopwords.words('english'))
     ps = PorterStemmer()
@@ -68,33 +66,36 @@ def gen_dict_corpus():
     # creates list of lists containing words of abstracts
     # doesn't include stop words or punctuation
     # stems words so that 'investing' and 'investment' become 'invest'
-    abstrs_many = []
+    stemmed_abstrs = []
     for abstr_path in abstr_paths:
         with open(abstr_path, encoding='utf-8', mode='r', errors='ignore') as file:
             wrds = word_tokenize(clean_txt(file.read()))
             # remove periods, commas and common english words
             abstr = [ps.stem(wrd) for wrd in wrds if wrd not in stop_words and wrd not in string.punctuation]
-            abstrs_many.append(abstr)
+            stemmed_abstrs.append(abstr)
     
     # remove words that appear more than once accross all abstracts.  
     frequency = defaultdict(int)
-    for text in abstrs_many:
-        for token in text:
-            frequency[token] += 1
-    abstrs = [
-            [token for token in text if frequency[token] > 1]
-            for text in abstrs_many
-            ]
+    for abstr in stemmed_abstrs:
+        for wrd in abstr:
+            frequency[wrd] += 1
+    cleaned_abstrs = [
+                     [wrd for wrd in abstr if frequency[wrd] > 1]
+                     for abstr in stemmed_abstrs
+                     ]
     
-    # dictionary mapping words to id#s, saves to disk
-    dictionary = gensim.corpora.Dictionary(abstrs)
+    # dictionary mapping words to id#s
+    dictionary = gensim.corpora.Dictionary(cleaned_abstrs)
     dictionary.save('dictionaries/committee_abstr_kwrds_ten_track_ext.dict')
 #    print(dictionary.token2id)
 #    print(len(dictionary.token2id))
     
     # creates a 'bag of words', saves to disk
-    corpus = [dictionary.doc2bow(text) for text in abstrs]
+    corpus = [dictionary.doc2bow(text) for text in cleaned_abstrs]
     gensim.corpora.MmCorpus.serialize('corpus/committee_abstr_kwrds_ten_track_ext.mm', corpus)
+    
+def save_dict_corpus(dictionary, corpus, data_dir_path):
+    
 
 def clean_txt(txt, stem=False):
     '''
@@ -141,3 +142,10 @@ def clean_txt(txt, stem=False):
     txt = ' '.join(txt_clean).lower()
     
     return txt
+
+def file_hash(file_path):
+    """Outputs hash of file as str"""
+    hash_func = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        hash_func.update(f.read())
+    return hash_func.hexdigest()

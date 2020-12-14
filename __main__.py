@@ -17,5 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+import sys
+
 from abstract_matching import main
+
+if sys.platform.startswith('win32'):
+    # windows platform
+if sys.platform.startswith('darwin'):
+    # mac
+
 main()

@@ -40,46 +40,40 @@ import datetime as dt
 import abstrprep
 
 
-# =============================================================================
-# def main(data_dir_path):
-#     name_path = os.path.join(data_dir_path, 'assignment_groups')
-#
-#     # open name lists
-#     editor_names = pd.read_csv(os.path.join(name_path, 'editor_names.csv'))
-#     editor_names['position'] = 'editor'
-#     assistant_editor_names = pd.read_csv(os.path.join(name_path, 'assistant_editor_names.csv'))
-#     assistant_editor_names['position'] = 'assistant_editor'
-#     referee_names = pd.read_csv(os.path.join(name_path, 'referee_names.csv'))
-#     referee_names['position'] = 'referee'
-#     # full list of names
-#     names = editor_names.append([assistant_editor_names, referee_names], ignore_index=True)
-#
-#     # find hash of name lists
-#     names_hash = file_hash(os.path.join(name_path, 'editor_names.csv'), os.path.join(name_path, 'assistant_editor_names.csv'), os.path.join(name_path, 'referee_names.csv'))
-#
-#     # load / generate dictionary and corpus
-#     try:
-#         # load if exists
-#         dictionary = gensim.corpora.Dictionary.load('{}.dict'.format(names_hash))
-#         corpus = gensim.corpora.MmCorpus('{}.mm'.format(names_hash))
-#     except FileNotFoundError:
-#         # create dictionary & corpus
-#         dictionary, corpus = abstrprep.gen_dict_corpus(names)
-#         # save to disk
-#         dictionary.save(os.path.join('data/dictionaries', '{}.dict'.format(names_hash)))
-#         gensim.corpora.MMCorpus.serialize(os.path.join('data/corpora', '{}.mm'.format(names_hash)), corpus)
-# =============================================================================
+def main(topics, data_dir_path):
+    name_path = 'assignment_groups'
 
+    # open name lists
+    editor_names = pd.read_csv(os.path.join(name_path, 'editor_names.csv'))
+    editor_names['position'] = 'editor'
+    assistant_editor_names = pd.read_csv(os.path.join(name_path, 'assistant_editor_names.csv'))
+    assistant_editor_names['position'] = 'assistant_editor'
+    referee_names = pd.read_csv(os.path.join(name_path, 'referee_names.csv'))
+    referee_names['position'] = 'referee'
+    # full list of names
+    names = editor_names.append([assistant_editor_names, referee_names], ignore_index=True)
 
+    # find hash of name lists
+    names_hash = file_hash(os.path.join(name_path, 'editor_names.csv'), os.path.join(name_path, 'assistant_editor_names.csv'), os.path.join(name_path, 'referee_names.csv'))
 
-
-
-def main():
-    abstrprep.hw()
-
-
-
-
+    # load / generate dictionary and corpus
+    try:
+        # load if exists
+        dictionary = gensim.corpora.Dictionary.load('{}.dict'.format(names_hash))
+        corpus = gensim.corpora.MmCorpus('{}.mm'.format(names_hash))
+    except FileNotFoundError:
+        # create dictionary & corpus
+        dictionary, corpus = abstrprep.gen_dict_corpus(names)
+        # save to disk
+        dictionary.save(os.path.join('data/dictionaries', '{}.dict'.format(names_hash)))
+        gensim.corpora.MMCorpus.serialize(os.path.join('data/corpora', '{}.mm'.format(names_hash)), corpus)
+        
+    # term frequency - inverse document frequency (tfidf) model
+    tfidf = gensim.models.TfidfModel(corpus)
+    corpus = tfidf[corpus]
+    
+    # latent semantic analysis model with tfidf transformed corups
+    model = gensim.models.LsiModel(corpus, id2word=dictionary, num_topics=topics)
 
 def file_hash(*args, block_size=262144):
     """Outputs hash of all file_path in *args as str"""
@@ -91,9 +85,6 @@ def file_hash(*args, block_size=262144):
                 hash_func.update(data_block)
                 data_block = f.read(block_size)
     return hash_func.hexdigest()
-
-
-
 
 
 if __name__ == '__main__':

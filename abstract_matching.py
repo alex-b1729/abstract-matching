@@ -40,7 +40,7 @@ import datetime as dt
 import abstrprep
 
 
-def main(topics, data_dir_path):
+def main(num_topics, data_dir_path):
     name_path = 'assignment_groups'
 
     # open name lists
@@ -73,7 +73,7 @@ def main(topics, data_dir_path):
     corpus = tfidf[corpus]
     
     # latent semantic analysis model with tfidf transformed corups
-    model = gensim.models.LsiModel(corpus, id2word=dictionary, num_topics=topics)
+    model = gensim.models.LsiModel(corpus, id2word=dictionary, num_topics=num_topics)
 
 def file_hash(*args, block_size=262144):
     """Outputs hash of all file_path in *args as str"""

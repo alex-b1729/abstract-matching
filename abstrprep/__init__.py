@@ -23,7 +23,8 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer 
 import gensim
-from shlex import quote
+import shlex
+import subprocess
 import string
 import os
 import numpy as np
@@ -66,6 +67,11 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
 
 def extract_abstract(os_type, paper_file_path='papers_to_assign'):
     """Converts pdfs to txt and saves abstracts"""
+    # xpdf path depends on os
+    if os_type=='darwin':
+        # mac
+        xpdf_path = os.path.join(os.getcwd(), 'xpdf-tools-mac-4.02/bin64/pdftotext')
+        
     # txt abstract path
     abstr_txt_path = os.path.join(paper_file_path, 'abstract_txts')
     
@@ -85,16 +91,12 @@ def extract_abstract(os_type, paper_file_path='papers_to_assign'):
                 submissions.append(entry.path)
                 sub_names.append(entry.name[:-4])
 
-# =============================================================================
-#     # below needs work
-# =============================================================================
     for paper_index in range(len(sub_names)):
         txt_path = os.path.join(abstr_txt_path, '{}.txt'.format(sub_names[paper_index]))
-        paper_path = papers[paper_index]
-        if txt_path not in query_paths:
-            comd = '{} {} {}'.format(quote(xpdf_path), quote(paper_path), quote(txt_path))
-            # get text from .pdf
-            os.system(comd)    
+        paper_path = submissions[paper_index].path
+        comd = '{} {} {}'.format(shlex.quote(xpdf_path), shlex.quote(paper_path), shlex.quote(txt_path))
+        # get text from .pdf
+        subprocess.run(comd, shell=True)    
 
     
 class CleanAbstracts():

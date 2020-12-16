@@ -27,6 +27,7 @@ import shlex
 import subprocess
 import string
 import os
+from sys import platform
 import numpy as np
 import re
 import hashlib
@@ -65,10 +66,10 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     return dictionary, corpus
     
 
-def extract_abstract(os_type, pdf_dir='papers_to_assign'):
+def extract_abstracts(pdf_dir='papers_to_assign'):
     """Converts pdfs to txt and saves abstracts"""
     # xpdf path depends on os
-    if os_type=='darwin':
+    if platform.startswith('darwin'):
         # mac
         xpdf_path = os.path.join(os.getcwd(), 'xpdf-tools-mac-4.02/bin64/pdftotext')
         
@@ -99,8 +100,7 @@ def extract_abstract(os_type, pdf_dir='papers_to_assign'):
     with os.scandir(abstr_txt_dir_path) as it:
         for entry in it:
             if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
-                if entry.name[:-4] not in pdf_file_names:
-                    txt_file_names.append(entry.name)
+                txt_file_names.append(entry.name[:-4])
                 
     # convert each pdf to txt using xpdf tool
     txt_issues = []
@@ -118,42 +118,43 @@ def extract_abstract(os_type, pdf_dir='papers_to_assign'):
                 txt_issues.append(paper_name)
             else:
                 # get text of abstract
-                with open(txt_result_path, mode='r', errors='ignore') as file:
+                with open(txt_result_path, mode='r+', errors='ignore') as file:
                     abstr_txt = get_abstract(file.read())
                     # overwrite txt file with abstract txt if abstract found
                     if abstr_txt:
                         file.seek(0)
                         file.write(abstr_txt)
                         file.truncate()
-                    else:
-                        abstr_issues.append(paper_name)
+                if not abstr_txt:
+                    os.remove(txt_result_path)
+                    abstr_issues.append(paper_name)
     
     # if issues with conversion
     if txt_issues != [] or abstr_issues != []:
         # txt conversion issues
-        print('Issue converting following .pdf file to .txt:')
-        for paper in txt_issues:
-            print('{}.pdf'.format(paper))
+        if txt_issues != []:
+            print('Issue converting following .pdf file to .txt:')
+            for paper in txt_issues:
+                print('{}.pdf'.format(paper))
         # issues finding abstracts
-        print('Issues extracting abstract from following .txt files:')
-        for paper in abstr_issues:
-            print('{}.txt'.format(paper))
+        if abstr_issues != []:
+            print('Issue extracting abstract from following .txt files:')
+            for paper in abstr_issues:
+                print('{}.txt'.format(paper))
         
         # wait to allow user to manually save txt abstracts
-        input('Please add missing abstracts to abstract_txts directory as a .txt file then press Enter...')
+        input('Please add missing abstracts to abstract_txts directory as a .txt file then press Enter, or Ctrl+C to quit. ')
             
         # double check that all abstracts are present
         all_converted = False
         while not all_converted:
             any_not_converted = False
-            with os.scandir(abstr_txt_dir_path) as it:
-                for entry in it:
-                    if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
-                        if entry.name[:-4] not in pdf_file_names:
-                            print('Abstract .txt file for {} not found.'.format(entry.name[:-4]))
-                            any_not_converted = True
+            for paper in pdf_file_names:
+                if not os.path.isfile(os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper))):
+                    print('Abstract file {}.txt not found.'.format(paper))
+                    any_not_converted = True
             if any_not_converted:
-                input('Not all .txt files found. \nPlease add missing abstracts then press Enter...')
+                input('Please add missing abstracts then press Enter, or Ctrl+C to quit. ')
             else:
                 all_converted = True
         
@@ -313,9 +314,10 @@ def get_abstract(txt):
             abstr = jels
     
     # issue if abstract is too long or short
-    abstr_wrds = len(abstr.split())
-    if abstr_wrds < 50 or abstr_wrds > 200:
-        abstr = None
+    if abstr:
+        abstr_wrds = len(abstr.split())
+        if abstr_wrds < 50 or abstr_wrds > 200:
+            abstr = None
 
     return abstr
 
@@ -338,5 +340,8 @@ def get_abstract(txt):
 #     
 # =============================================================================
 
-
-
+# =============================================================================
+# os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
+# extract_abstracts()
+# 
+# =============================================================================

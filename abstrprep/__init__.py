@@ -48,7 +48,7 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     abstr_paths = []
     for row in names.itertuples():
         for num in range(1, row[2]+1):
-            abstr_paths.append('{}/{}_{}_{}.text'.format(row[0][0].upper(), row[0], row[1], num))
+            abstr_paths.append('{}/{}_{}_{}.txt'.format(row[0][0].upper(), row[0], row[1], num))
     
     # iterator loads all abstracts
     dictionary = gensim.corpora.Dictionary(CleanAbstracts(abstr_paths))
@@ -61,7 +61,7 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     dictionary.compactify()
     
     # memory friendly corpus
-    corpus = IterCorpus(abstr_paths)
+    corpus = IterCorpus(abstr_paths, dictionary)
     
     return dictionary, corpus
     
@@ -181,18 +181,23 @@ class CleanAbstracts():
 
 
 class IterCorpus():
-    def __init__(self, txt_paths):
+    """Memory friendly way to generate corpus"""
+    def __init__(self, txt_paths, dictionary):
         self.txt_paths = txt_paths
+        self.dictionary = dictionary
         
     def __iter__(self):
-        stop_words = set(stopwords.words('english'))
-        ps = PorterStemmer()        
         for path in self.txt_paths:
             with open(os.path.join('data/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
-                yield dictionary.doc2bow([ps.stem(wrd) for wrd in 
-                                          gensim.utils.simple_preprocess(file.read(), deacc=True)
-                                          if wrd not in stop_words])
-
+                yield self.dictionary.doc2bow(self.meaningful_wrds(file.read()))
+                
+    def meaningful_wrds(text):
+        ps = PorterStemmer()
+        stop_words = set(stopwords.words('english'))
+        [ps.stem(wrd) for wrd in 
+         gensim.utils.simple_preprocess(text, deacc=True)
+         if wrd not in stop_words]
+        
 
 def get_abstract(txt):
     '''

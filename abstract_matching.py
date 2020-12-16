@@ -68,8 +68,9 @@ def main(num_topics, data_dir_path):
         dictionary.save(os.path.join('data/dictionaries', '{}.dict'.format(names_hash)))
         gensim.corpora.MMCorpus.serialize(os.path.join('data/corpora', '{}.mm'.format(names_hash)), corpus)
         
-    # term frequency - inverse document frequency (tfidf) model
+    # train tfidf model using corpus
     tfidf = gensim.models.TfidfModel(corpus)
+    # transform corpus using trained tfidf model
     corpus = tfidf[corpus]
     
     # latent semantic analysis model with tfidf transformed corups

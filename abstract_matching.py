@@ -74,6 +74,9 @@ def main(num_topics, data_dir_path):
     
     # latent semantic analysis model with tfidf transformed corups
     model = gensim.models.LsiModel(corpus, id2word=dictionary, num_topics=num_topics)
+    
+    # convert pdf submissions to txt abstracts
+    submission_names = abstrprep.extract_abstracts()
 
 def file_hash(*args, block_size=262144):
     """Outputs hash of all file_path in *args as str"""

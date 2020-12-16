@@ -67,7 +67,7 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     
 
 def extract_abstracts(pdf_dir='papers_to_assign'):
-    """Converts pdfs to txt and saves abstracts"""
+    """Converts pdfs to txt and saves abstracts then returns file names"""
     # xpdf path depends on os
     if platform.startswith('darwin'):
         # mac
@@ -133,12 +133,12 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
     if txt_issues != [] or abstr_issues != []:
         # txt conversion issues
         if txt_issues != []:
-            print('Issue converting following .pdf file to .txt:')
+            print('Issue converting following .pdf file(s) to .txt:')
             for paper in txt_issues:
                 print('{}.pdf'.format(paper))
         # issues finding abstracts
         if abstr_issues != []:
-            print('Issue extracting abstract from following .txt files:')
+            print('Issue extracting abstract from following .txt file(s):')
             for paper in abstr_issues:
                 print('{}.txt'.format(paper))
         
@@ -158,6 +158,7 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
             else:
                 all_converted = True
         
+    return pdf_file_names
 
 
     
@@ -343,5 +344,5 @@ def get_abstract(txt):
 # =============================================================================
 # os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
 # extract_abstracts()
-# 
 # =============================================================================
+

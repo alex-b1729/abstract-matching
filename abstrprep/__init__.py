@@ -47,8 +47,8 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     # abstract file relative paths
     abstr_paths = []
     for row in names.itertuples():
-        for num in range(1, row[2]+1):
-            abstr_paths.append('{}/{}_{}_{}.txt'.format(row[0][0].upper(), row[0], row[1], num))
+        for num in range(1, int(row[3])+1):
+            abstr_paths.append('{}/{}_{}_{}.txt'.format(row[1][0].upper(), row[1], row[2], num))
     
     # iterator loads all abstracts
     dictionary = gensim.corpora.Dictionary(CleanAbstracts(abstr_paths))
@@ -61,7 +61,7 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     dictionary.compactify()
     
     # memory friendly corpus
-    corpus = IterCorpus(abstr_paths, dictionary)
+    corpus = [abstr_samp for abstr_samp in IterCorpus(abstr_paths, dictionary)]
     
     return dictionary, corpus
     
@@ -71,7 +71,7 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
     # xpdf path depends on os
     if platform.startswith('darwin'):
         # mac
-        xpdf_path = os.path.join(os.getcwd(), 'xpdf-tools-mac-4.02/bin64/pdftotext')
+        xpdf_path = os.path.join(os.getcwd(), 'xpdf-tools-mac-4.02', 'bin64', 'pdftotext')
         
     # pdf directory full path
     pdf_dir_path = os.path.join(os.getcwd(), pdf_dir)
@@ -163,22 +163,16 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
 
     
 class CleanAbstracts():
-    def __init__(self, txt, txt_paths):
+    def __init__(self, txt_paths):
         self.txt_paths = txt_paths
-        self.txt = txt
     
     def __iter__(self):
         for path in self.txt_paths:
-            with open(os.path.join('data/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
-                yield self.meaningful_wrds(file.read())
-    
-    def meaningful_wrds(text):
-        ps = PorterStemmer()
-        stop_words = set(stopwords.words('english'))
-        [ps.stem(wrd) for wrd in 
-         gensim.utils.simple_preprocess(text, deacc=True)
-         if wrd not in stop_words]
-
+            # ADD 'data'
+            with open(os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
+                abstr = file.read()
+                yield meaningful_wrds(abstr)
+                
 
 class IterCorpus():
     """Memory friendly way to generate corpus"""
@@ -188,16 +182,18 @@ class IterCorpus():
         
     def __iter__(self):
         for path in self.txt_paths:
-            with open(os.path.join('data/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
-                yield self.dictionary.doc2bow(self.meaningful_wrds(file.read()))
-                
-    def meaningful_wrds(text):
-        ps = PorterStemmer()
-        stop_words = set(stopwords.words('english'))
-        [ps.stem(wrd) for wrd in 
-         gensim.utils.simple_preprocess(text, deacc=True)
-         if wrd not in stop_words]
+            # ADD 'data'
+            with open(os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
+                yield self.dictionary.doc2bow(meaningful_wrds(file.read()))
         
+
+def meaningful_wrds(text):
+    ps = PorterStemmer()
+    stop_words = set(stopwords.words('english'))
+    return [ps.stem(wrd) for wrd in 
+            gensim.utils.simple_preprocess(text, deacc=True)
+            if wrd not in stop_words]
+
 
 def get_abstract(txt):
     '''
@@ -349,5 +345,9 @@ def get_abstract(txt):
 # =============================================================================
 # os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
 # extract_abstracts()
+# =============================================================================
+
+# =============================================================================
+# print(CleanAbstracts().meaningful_wrds('Documents document, saving saved, transformative 45^, and other small a an the'))
 # =============================================================================
 

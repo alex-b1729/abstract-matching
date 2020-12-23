@@ -22,11 +22,11 @@ import sys
 
 from abstract_matching import main
 
-if sys.platform.startswith('win32'):
-    # windows platform
-if sys.platform.startswith('cygwin'):
-    # windows 
-if sys.platform.startswith('darwin'):
-    # mac
+# if sys.platform.startswith('win32'):
+#     # windows platform
+# if sys.platform.startswith('cygwin'):
+#     # windows
+# if sys.platform.startswith('darwin'):
+#     # mac
 
-main()
+main(num_topics=10)

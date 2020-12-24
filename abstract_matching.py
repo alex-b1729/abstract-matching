@@ -42,7 +42,7 @@ import pprint
 import abstrprep
 
 
-def main(num_topics, model='lsi', use_tfidf=True):
+def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use_tfidf=True):
     
     
     os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
@@ -142,7 +142,7 @@ def main(num_topics, model='lsi', use_tfidf=True):
         #     print(s, fac_dict[s[0]])
         # print('\n\n')
         
-    # all matricies have researchers indexing rows and papers indexing columns
+    # all matricies have researchers on rows and papers on columns
     # print('sample_df', sample_df, sep='\n')
     # print('similarity_vectors', similarity_vectors, sep='\n')
     cost_matrix = np.transpose(1 - np.array(similarity_vectors))
@@ -158,16 +158,42 @@ def main(num_topics, model='lsi', use_tfidf=True):
     # print(referee_cost_matrix)
     
     referee_assignments = np.zeros(referee_cost_matrix.shape)
-    # When a paper is assigned it's column is replaced by a vector of 1's
-    # Loop while not all entries are 1's
-    while not np.all(referee_cost_matrix == 1): 
-        # Assignes each faculty member 1 paper using the Hungarian algorithm
-        faculty_array, paper_array = linear_sum_assignment(referee_cost_matrix)
-        for assign_ind, paper_col in enumerate(paper_array):
-            faculty_row = faculty_array[assign_ind]
+    # refs can only be assigned to 1 paper
+    for i in range(num_refs_to_assign): 
+        # Assignes each ref to 1 paper using the Hungarian algorithm
+        referee_assign_array, paper_assign_array = linear_sum_assignment(referee_cost_matrix)
+        for assign_index, paper_col in enumerate(paper_assign_array):
+            referee_row = referee_assign_array[assign_index]
             # mark faculty, paper as assigned
-            referee_assignments[faculty_row, paper_col] = 1
-        
+            referee_assignments[referee_row, paper_col] = 1
+            # mark as costly so no 2nd assignment to same ref
+            referee_cost_matrix[referee_row,:] = np.ones((1, referee_cost_matrix.shape[1]))
+            
+    # assistant editor assignments
+    ae_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='assistant_editor'], 
+                                   index=sample_df[sample_df['position']=='assistant_editor']['fac_index'])
+    ae_cost_matrix = np.array(ae_cost_df.groupby('fac_index').min())
+    ae_assignments = np.zeros(ae_cost_matrix.shape)
+    # aes can only be assigned 1 paper
+    for i in range(num_aes_to_assign):
+        ae_assign_array, paper_assign_array = linear_sum_assignment(ae_cost_matrix)
+        for assign_index, paper_col in enumerate(paper_assign_array):
+            ae_row = ae_assign_array[assign_index]
+            # mark faculty, paper as assigned
+            ae_assignments[ae_row, paper_col] = 1
+            # mark as costly so no 2nd assignment to same ref
+            ae_cost_matrix[ae_row,:] = np.ones((1, ae_cost_matrix.shape[1]))
+            
+    # editor assignments
+    editor_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='editor'], 
+                                   index=sample_df[sample_df['position']=='editor']['fac_index'])
+    
+# =============================================================================
+#     # HOW TO GROUP EDITOR SAMPLES TO BEST REFLECT SIMILARITY OF RESEARCH????
+#     editor_cost_matrix = np.array(editor_cost_df.groupby('fac_index').min())
+# =============================================================================
+    editor_assignments = np.zeros(editor_cost_matrix.shape)
+    
     
     
     

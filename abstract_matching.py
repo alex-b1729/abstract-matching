@@ -185,15 +185,32 @@ def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use
             ae_cost_matrix[ae_row,:] = np.ones((1, ae_cost_matrix.shape[1]))
             
     # editor assignments
-    editor_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='editor'], 
-                                   index=sample_df[sample_df['position']=='editor']['fac_index'])
-    
-# =============================================================================
-#     # HOW TO GROUP EDITOR SAMPLES TO BEST REFLECT SIMILARITY OF RESEARCH????
-#     editor_cost_matrix = np.array(editor_cost_df.groupby('fac_index').min())
-# =============================================================================
+    editor_abstr_cost_matrix = cost_matrix[sample_df['position']=='editor']
+    editor_assignment_costs = np.ones(editor_abstr_cost_matrix.shape)
+    # assign each paper to 5 (arbitrary number) editors 
+    # assign based on sum of costs for each time an editor is assigned a paper
+    for i in range(5):
+        editor_assign_array, paper_assign_array = linear_sum_assignment(editor_abstr_cost_matrix)
+        for assign_index, paper_col in enumerate(paper_assign_array):
+            editor_row = editor_assign_array[assign_index]
+            # mark faculty, paper as assigned using cost
+            editor_assignment_costs[editor_row, paper_col] = editor_abstr_cost_matrix[editor_row, paper_col]
+            # mark as costly so no 2nd assignment of same ref to same paper
+            editor_abstr_cost_matrix[editor_row, paper_col] = 1
+    # find sum of costs for each editor for each paper
+    editor_assignment_cost_df = pd.DataFrame(editor_assignment_costs, 
+                                             index=sample_df[sample_df['position']=='editor']['fac_index'])
+    editor_cost_matrix = np.array(editor_assignment_cost_df.groupby('fac_index').sum())
     editor_assignments = np.zeros(editor_cost_matrix.shape)
-    
+    # assign each paper to 1 editor
+    while not np.all(editor_cost_matrix == 1):
+        editor_assign_array, paper_assign_array = linear_sum_assignment(editor_cost_matrix)
+        for assign_index, paper_col in enumerate(paper_assign_array):
+            editor_row = editor_assign_array[assign_index]
+            # mark assignment
+            editor_assignments[editor_row, paper_col] = 1
+            # mark column of assigned paper with 1's
+            editor_cost_matrix[:,paper_col] = np.ones(editor_cost_matrix.shape[0])
     
     
     

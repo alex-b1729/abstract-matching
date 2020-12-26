@@ -42,8 +42,8 @@ import pprint
 import abstrprep
 
 
-def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use_tfidf=True):
-    
+def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use_tfidf=True):
+    pd.set_option('display.max_rows', 1000)
     
     os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
     print(os.getcwd())
@@ -85,7 +85,7 @@ def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use
     sample_df = pd.DataFrame({'lastname':all_last, 'firstname':all_first, 
                                     'position':all_pos, 'fac_index':all_index, 
                                     'samp_name':all_samps})
-    
+    print('sample df', sample_df, sep='\n')
 
     # load / generate dictionary and corpus
     try:
@@ -100,12 +100,12 @@ def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use
         dictionary.save(os.path.join('data', 'dictionaries', '{}.dict'.format(names_hash)))
         gensim.corpora.MmCorpus.serialize(os.path.join('data', 'corpora', '{}.mm'.format(names_hash)), corpus)
     
-    # # print dictionary to file for reference
-    # with open('/Users/abrefeld/Desktop/token2id.txt', mode='w') as file:
-    #     print(dictionary.token2id, file=file)
-    # with open('/Users/abrefeld/Desktop/corp.txt', mode='w') as file:
-    #     for vec in corpus:
-    #         print(vec, file=file)
+    # print dictionary to file for reference
+    with open('/Users/abrefeld/Desktop/token2id.txt', mode='w') as file:
+        print(dictionary.token2id, file=file)
+    with open('/Users/abrefeld/Desktop/corp.txt', mode='w') as file:
+        for vec in corpus:
+            print(vec, file=file)
         
     # load / train model
     try:
@@ -153,26 +153,30 @@ def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use
     # choose ref with highest similarity (lowest cost)
     referee_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='referee'], 
                                    index=sample_df[sample_df['position']=='referee']['fac_index'])
-    # print(referee_cost_df)
+    print('ref cost df', referee_cost_df, sep='\n')
     referee_cost_matrix = np.array(referee_cost_df.groupby('fac_index').min())
-    # print(referee_cost_matrix)
     
     referee_assignments = np.zeros(referee_cost_matrix.shape)
     # refs can only be assigned to 1 paper
     for i in range(num_refs_to_assign): 
+        print('ref cost matrix', referee_cost_matrix, sep='\n')
         # Assignes each ref to 1 paper using the Hungarian algorithm
         referee_assign_array, paper_assign_array = linear_sum_assignment(referee_cost_matrix)
+        print('ref', referee_assign_array)
+        print('paper', paper_assign_array)
         for assign_index, paper_col in enumerate(paper_assign_array):
             referee_row = referee_assign_array[assign_index]
             # mark faculty, paper as assigned
             referee_assignments[referee_row, paper_col] = 1
             # mark as costly so no 2nd assignment to same ref
             referee_cost_matrix[referee_row,:] = np.ones((1, referee_cost_matrix.shape[1]))
-            
+    print('ref assignment', referee_assignments, sep='\n')
     # assistant editor assignments
     ae_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='assistant_editor'], 
                                    index=sample_df[sample_df['position']=='assistant_editor']['fac_index'])
+    print('ae cost df', ae_cost_df, sep='\n')
     ae_cost_matrix = np.array(ae_cost_df.groupby('fac_index').min())
+    print('ae cost matrix', ae_cost_matrix, sep='\n')
     ae_assignments = np.zeros(ae_cost_matrix.shape)
     # aes can only be assigned 1 paper
     for i in range(num_aes_to_assign):
@@ -183,14 +187,17 @@ def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use
             ae_assignments[ae_row, paper_col] = 1
             # mark as costly so no 2nd assignment to same ref
             ae_cost_matrix[ae_row,:] = np.ones((1, ae_cost_matrix.shape[1]))
-            
+    print('ae assignment', ae_assignments, sep='\n')
     # editor assignments
     editor_abstr_cost_matrix = cost_matrix[sample_df['position']=='editor']
+    print('e abstr cost matrix', editor_abstr_cost_matrix, sep='\n')
     editor_assignment_costs = np.ones(editor_abstr_cost_matrix.shape)
     # assign each paper to 5 (arbitrary number) editors 
     # assign based on sum of costs for each time an editor is assigned a paper
     for i in range(5):
         editor_assign_array, paper_assign_array = linear_sum_assignment(editor_abstr_cost_matrix)
+        print('editor', editor_assign_array)
+        print('paper', paper_assign_array)
         for assign_index, paper_col in enumerate(paper_assign_array):
             editor_row = editor_assign_array[assign_index]
             # mark faculty, paper as assigned using cost
@@ -200,18 +207,24 @@ def main(num_topics, num_refs_to_assign=7, num_aes_to_assign=2, model='lsi', use
     # find sum of costs for each editor for each paper
     editor_assignment_cost_df = pd.DataFrame(editor_assignment_costs, 
                                              index=sample_df[sample_df['position']=='editor']['fac_index'])
+    print('e assignment cost df', editor_assignment_cost_df, sep='\n')
     editor_cost_matrix = np.array(editor_assignment_cost_df.groupby('fac_index').sum())
+    print('e cost matrix', editor_cost_matrix, sep='\n')
     editor_assignments = np.zeros(editor_cost_matrix.shape)
     # assign each paper to 1 editor
     while not np.all(editor_cost_matrix == 1):
         editor_assign_array, paper_assign_array = linear_sum_assignment(editor_cost_matrix)
+        print('editor', editor_assign_array)
+        print('paper', paper_assign_array)
         for assign_index, paper_col in enumerate(paper_assign_array):
-            editor_row = editor_assign_array[assign_index]
-            # mark assignment
-            editor_assignments[editor_row, paper_col] = 1
-            # mark column of assigned paper with 1's
-            editor_cost_matrix[:,paper_col] = np.ones(editor_cost_matrix.shape[0])
-    
+            # if not already assigned
+            if editor_assignments[:,paper_col].sum() == 0:
+                editor_row = editor_assign_array[assign_index]
+                # mark assignment
+                editor_assignments[editor_row, paper_col] = 1
+                # mark column of assigned paper with 1's
+                editor_cost_matrix[:,paper_col] = np.ones(editor_cost_matrix.shape[0])
+    print('e assignment', editor_assignments, sep='\n')
     
     
     

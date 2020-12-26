@@ -62,8 +62,7 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
     # find hash of name lists
     names_hash = file_hash(os.path.join(name_path, 'editor_names_testing.csv'), os.path.join(name_path, 'assistant_editor_names_testing.csv'), os.path.join(name_path, 'referee_names_testing.csv'))
 
-    # generate dictionary matching corpus index to abstract sample
-    ind = 0
+    # generate dictionary matching faculty index to name
     fac_index = 0
     fac_dict = {}
     all_last = []
@@ -72,10 +71,9 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
     all_index = []
     all_samps = []
     for row in names.itertuples():
+        fac_dict[fac_index] = '{} {}'.format(row[2], row[1])
         for num in range(1, int(row[3])+1):
             abstr_samp = '{}_{}_{}'.format(row[1], row[2], num)
-            fac_dict[ind] = abstr_samp
-            ind += 1
             all_last.append(row[1])
             all_first.append(row[2])
             all_pos.append(row[4])
@@ -126,6 +124,8 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
     
     # convert pdf submissions to txt abstracts
     submission_names = abstrprep.extract_abstracts()
+    # matches index of submission with file name (no extension)
+    submission_dict = {ind: submission for ind, submission in enumerate(submission_names)}
     
     # find 1 - cosine similarity for each submission
     similarity_vectors = []

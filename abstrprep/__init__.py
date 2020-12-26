@@ -197,6 +197,15 @@ def meaningful_wrds(text):
             if wrd not in stop_words]
 
 
+class EditorMessage():
+    """Format message to editor"""
+    def __init__(self, editor_name):
+        self.editor_name = editor_name
+        self.submisions = []
+        
+    def add_submission(self, sumbission_name):
+        self.submissions.append(self.submission_name)
+
 def get_abstract(txt):
     '''
     Attempts to extract abstract from text of paper by searching for the

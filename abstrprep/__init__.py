@@ -61,6 +61,8 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     dictionary.compactify()
     
     # memory friendly corpus
+    # corpus = IterCorpus(abstr_paths, dictionary)
+    # not memory friendly corpus
     corpus = [abstr_samp for abstr_samp in IterCorpus(abstr_paths, dictionary)]
     
     return dictionary, corpus

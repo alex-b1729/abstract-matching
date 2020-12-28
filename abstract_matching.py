@@ -44,6 +44,7 @@ import abstrprep
 
 def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use_tfidf=True):
     pd.set_option('display.max_rows', 1000)
+    pd.set_option('display.max_columns', 10)
     
     os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
     print(os.getcwd())
@@ -61,7 +62,7 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
     names = editor_names.append([assistant_editor_names, referee_names], ignore_index=True)
     # find hash of name lists
     names_hash = file_hash(os.path.join(name_path, 'editor_names_testing.csv'), os.path.join(name_path, 'assistant_editor_names_testing.csv'), os.path.join(name_path, 'referee_names_testing.csv'))
-
+    print(names)
     # generate dictionary matching faculty index to name
     fac_index = 0
     fac_dict = {}
@@ -126,7 +127,7 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
     submission_names = abstrprep.extract_abstracts()
     # matches index of submission with file name (no extension)
     submission_dict = {ind: submission for ind, submission in enumerate(submission_names)}
-    
+    print(submission_names)
     # find 1 - cosine similarity for each submission
     similarity_vectors = []
     for query in submission_names:
@@ -185,7 +186,7 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
     for i in range(num_aes_to_assign):
         ae_assign_array, paper_assign_array = linear_sum_assignment(ae_cost_matrix)
         for assign_index, paper_col in enumerate(paper_assign_array):
-            if ae_assignments[:,paper_col].sum() == 0:
+            if ae_assignments[:,paper_col].sum() < num_aes_to_assign:
                 ae_row = ae_assign_array[assign_index]
                 # mark faculty, paper as assigned
                 ae_assignments[ae_row, paper_col] = 1
@@ -230,12 +231,49 @@ def main(num_topics, num_refs_to_assign=2, num_aes_to_assign=2, model='lsi', use
                 editor_cost_matrix[:,paper_col] = np.ones(editor_cost_matrix.shape[0])
     # print('e assignment', editor_assignments, sep='\n')
     
+    assignment_matrix = np.append(np.append(editor_assignments, ae_assignments, axis=0), referee_assignments, axis=0)
+    names[submission_names] = assignment_matrix
+    print(names)
     
+    # print(names['Mian_Sufi_2009'].to_numpy().nonzero())
     
+    message = ''
     
+    # find papers assigned to each editor
+    for editor_index in range(names[names['position']=='editor'].shape[0]):
+        editor_firstname = names['firstname'].iloc[editor_index]
+        num_assignments = 0
+        # check for paper assignments
+        for submission in submission_names:
+            # if paper assigned to editor
+            if names[submission].iloc[editor_index] == 1:
+                if num_assignments == 0:
+                    message += f'Dear {editor_firstname}, \nThis week, you were matched to the following papers: \n\n'
+                num_assignments += 1
+                message += f'Manuscript: {submission}\n'
+                # suggested assistant editors
+                ae_suggestions = names[(names['position']=='assistant_editor') & (names[submission]==1)]
+                ae_name_list = []
+                for row in ae_suggestions.itertuples():
+                    ae_name_list.append('{} {}'.format(row[2].capitalize(), row[1].capitalize()))
+                message += 'Assistant Editor Ideas:\t{}\n'.format('\n\t\t\t'.join(ae_name_list))
+                # suggested refs
+                ref_suggestions = names[(names['position']=='referee') & (names[submission]==1)]
+                ref_name_list = []
+                for row in ref_suggestions.itertuples():
+                    ref_name_list.append('{} {}'.format(row[2].capitalize(), row[1].capitalize()))
+                message += 'Referee Ideas:\t{}\n\n'.format('\n\t\t'.join(ref_name_list))
+        # space between editor messages
+        if num_assignments != 0:
+            message += '\n{}\n\n'.format('/'*80)
     
-    
-    # subprocess.run(['open', '/Users/abrefeld/Dropbox/UK/JCF_assignment/assignment_results/12-17-2020.txt'])
+    # save message to .txt file with today's date
+    td = str(dt.date.today())
+    message_path = os.path.join('assignment_results', '{}.txt'.format(td))
+    with open(message_path, 'w') as file:
+        file.write(message)
+    # open message
+    subprocess.run(['open', message_path])
 
 
 def file_hash(*args, block_size=262144):

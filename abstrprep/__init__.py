@@ -47,8 +47,19 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     # abstract file relative paths
     abstr_paths = []
     for row in names.itertuples():
-        for num in range(1, int(row[3])+1):
-            abstr_paths.append('{}/{}_{}_{}.txt'.format(row[1][0].upper(), row[1], row[2], num))
+        num_samps = int(row[3])
+        for num in range(1, num_samps+1):
+            ln = '_'.join(row[1].split())
+            fn = '_'.join(row[2].split())
+            abstr_paths.append('{}/{}_{}_{}.txt'.format(ln[0].upper(), ln, fn, num))
+    
+    # finds missing / mislabeled abstract samples
+    # probs = []
+    # for p in abstr_paths:
+    #     file_path = os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', p)
+    #     if not os.path.exists(file_path):
+    #         probs.append(p)
+    # pprint.pprint(probs)
     
     # iterator loads all abstracts
     dictionary = gensim.corpora.Dictionary(CleanAbstracts(abstr_paths))

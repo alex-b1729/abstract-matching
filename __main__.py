@@ -18,15 +18,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import sys
+import argparse
 
 from abstract_matching import main
 
-# if sys.platform.startswith('win32'):
-#     # windows platform
-# if sys.platform.startswith('cygwin'):
-#     # windows
-# if sys.platform.startswith('darwin'):
-#     # mac
+# parser = argparse.ArgumentParser()
+# parser.add_argument('-n', '--no-convert', help='Don\'t convert .pdf files to .txt')
+# args = parser.parse_args()
 
-main(num_topics=10)
+main(num_topics=200)

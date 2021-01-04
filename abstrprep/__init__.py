@@ -20,7 +20,7 @@
 
 
 from nltk.corpus import stopwords
-from nltk.stem.porter import PorterStemmer 
+from nltk.stem.porter import PorterStemmer
 import gensim
 import shlex
 import subprocess
@@ -41,32 +41,32 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
             ln = '_'.join(row[1].split())
             fn = '_'.join(row[2].split())
             abstr_paths.append('{}/{}_{}_{}.txt'.format(ln[0].upper(), ln, fn, num))
-    
+
     # finds missing / mislabeled abstract samples
     # probs = []
     # for p in abstr_paths:
-    #     file_path = os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', p)
+    #     file_path = os.path.join('data/learning_abstracts', p)
     #     if not os.path.exists(file_path):
     #         probs.append(p)
     # pprint.pprint(probs)
-    
+
     # iterator loads all abstracts
     dictionary = gensim.corpora.Dictionary(CleanAbstracts(abstr_paths))
-    
+
     # remove words that appear only once accross all documents
     once_ids = [tokenid for tokenid, docfreq in iteritems(dictionary.dfs)
                 if docfreq == 1]
     dictionary.filter_tokens(once_ids)
     # remove gaps in ids
     dictionary.compactify()
-    
+
     # memory friendly corpus
     # corpus = IterCorpus(abstr_paths, dictionary)
     # not memory friendly corpus
     corpus = [abstr_samp for abstr_samp in IterCorpus(abstr_paths, dictionary)]
-    
+
     return dictionary, corpus
-    
+
 
 def extract_abstracts(pdf_dir='papers_to_assign'):
     """Converts pdfs to txt and saves abstracts then returns file names"""
@@ -74,12 +74,12 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
     if platform.startswith('darwin'):
         # mac
         xpdf_path = os.path.join(os.getcwd(), 'xpdf-tools-mac-4.02', 'bin64', 'pdftotext')
-        
+
     # pdf directory full path
     pdf_dir_path = os.path.join(os.getcwd(), pdf_dir)
     # txt abstract full path
     abstr_txt_dir_path = os.path.join(pdf_dir_path, 'abstract_txts')
-    
+
     # check if pdf path exists
     if os.path.isdir(pdf_dir_path):
         if not os.path.isdir(abstr_txt_dir_path):
@@ -96,14 +96,14 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
             if entry.name.endswith('.pdf') and entry.is_file() and not entry.name.startswith('.'):
                 # save file name without extension
                 pdf_file_names.append(entry.name[:-4])
-                
+
     # find abstracts already converted to txt
     txt_file_names = []
     with os.scandir(abstr_txt_dir_path) as it:
         for entry in it:
             if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
                 txt_file_names.append(entry.name[:-4])
-                
+
     # convert each pdf to txt using xpdf tool
     txt_issues = []
     abstr_issues = []
@@ -130,7 +130,7 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
                 if not abstr_txt:
                     os.remove(txt_result_path)
                     abstr_issues.append(paper_name)
-    
+
     # if issues with conversion
     if txt_issues != [] or abstr_issues != []:
         # txt conversion issues
@@ -143,10 +143,10 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
             print('Issue extracting abstract from following .txt file(s):')
             for paper in abstr_issues:
                 print('{}.txt'.format(paper))
-        
+
         # wait to allow user to manually save txt abstracts
         input('Please add missing abstracts to abstract_txts directory as a .txt file then press Enter, or Ctrl+C to quit. ')
-            
+
         # double check that all abstracts are present
         all_converted = False
         while not all_converted:
@@ -159,39 +159,39 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
                 input('Please add missing abstracts then press Enter, or Ctrl+C to quit. ')
             else:
                 all_converted = True
-        
+
     return pdf_file_names
 
-    
+
 class CleanAbstracts():
     def __init__(self, txt_paths):
         self.txt_paths = txt_paths
-    
+
     def __iter__(self):
         for path in self.txt_paths:
             # ADD 'data'
             with open(os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
                 abstr = file.read()
                 yield meaningful_wrds(abstr)
-                
+
 
 class IterCorpus():
     """Memory friendly way to generate corpus"""
     def __init__(self, txt_paths, dictionary):
         self.txt_paths = txt_paths
         self.dictionary = dictionary
-        
+
     def __iter__(self):
         for path in self.txt_paths:
             # ADD 'data'
             with open(os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
                 yield self.dictionary.doc2bow(meaningful_wrds(file.read()))
-        
+
 
 def meaningful_wrds(text):
     ps = PorterStemmer()
     stop_words = set(stopwords.words('english'))
-    return [ps.stem(wrd) for wrd in 
+    return [ps.stem(wrd) for wrd in
             gensim.utils.simple_preprocess(text, deacc=True)
             if wrd not in stop_words]
 
@@ -199,31 +199,31 @@ def meaningful_wrds(text):
 def get_abstract(txt):
     '''
     Attempts to extract abstract from text of paper by searching for the
-    word 'abstract' then taking everything untill the next newline char.  
-    
+    word 'abstract' then taking everything untill the next newline char.
+
     Sometimes keywords are on the same line as the abstract so if 'keywords:'
-    appears before the first newline char the abstract is assumed to end there.  
-    
+    appears before the first newline char the abstract is assumed to end there.
+
     In some cases the abstract covers multiple lines.  If the function finds
     that the first new line char appears within the first 120 characters
     then it searches for the first appearance of 'keywords:', 'we thank',
-    'the authors thank', or 'jel classification' and assumes abstract texts 
-    ends there.  
-    
-    Also attempts to find and include keywords and jel classifications.  
-    
+    'the authors thank', or 'jel classification' and assumes abstract texts
+    ends there.
+
+    Also attempts to find and include keywords and jel classifications.
+
     Parameters: txt (str): paper text
-    
+
     Returns: str or None if no abstract found
-    
+
     Honastly this function is a mess but so far words as needed...
-    
-    Still needs work: isn't accurite as needed when abstract doesn't appear 
+
+    Still needs work: isn't accurite as needed when abstract doesn't appear
     but finds jel classifications
     '''
-    
+
     abstr = None
-    
+
     # reg expression to find jel classifications
     jels = re.search('JEL.*:\s([A-Z]{1}[0-9]{1,2})[,;A-Z 0-9]+', txt[:3000])
     if jels:
@@ -252,9 +252,9 @@ def get_abstract(txt):
                     jel = jel[:-1]
                 all_jel.append(jel.strip())
             jels = ' '.join(all_jel)
-        
+
     txt = txt.lower()
-    
+
     loc = txt.find('abstract')
     # if found in txt
     if loc != -1:
@@ -278,7 +278,7 @@ def get_abstract(txt):
             kwrd_2 = txt.find('key words:')
             kwrd = max(kwrd_1, kwrd_2)
             txt = ' '.join([txt[:kwrd], txt[kwrd+9:]])
-        
+
         else:
             end = txt.find('\n', 10)
             if end < 120:
@@ -309,13 +309,13 @@ def get_abstract(txt):
                     end = txt.find('keywords:')
                     txt = txt[:end]
         abstr = txt
-        
+
     if jels:
         if abstr:
             abstr = '{} {}'.format(abstr,jels)
         else:
             abstr = jels
-    
+
     # issue if abstract is too long or short
     if abstr:
         abstr_wrds = len(abstr.split())
@@ -323,4 +323,3 @@ def get_abstract(txt):
             abstr = None
 
     return abstr
-

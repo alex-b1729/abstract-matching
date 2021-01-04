@@ -19,25 +19,14 @@
 
 
 
-# from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer 
 import gensim
 import shlex
 import subprocess
-# import string
 import os
 from sys import platform
-# import numpy as np
 import re
-# import hashlib
-# from scipy.optimize import linear_sum_assignment
-# from scipy.stats import percentileofscore
-# import pandas as pd
-# import urllib.parse
-# from collections import defaultdict
-# from shutil import move
-# import datetime as dt
 from six import iteritems
 import pprint
 

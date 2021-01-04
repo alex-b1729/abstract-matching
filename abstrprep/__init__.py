@@ -19,25 +19,25 @@
 
 
 
-from nltk.tokenize import word_tokenize
+# from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer 
 import gensim
 import shlex
 import subprocess
-import string
+# import string
 import os
 from sys import platform
-import numpy as np
+# import numpy as np
 import re
-import hashlib
-from scipy.optimize import linear_sum_assignment
-from scipy.stats import percentileofscore
-import pandas as pd
-import urllib.parse
-from collections import defaultdict
-from shutil import move
-import datetime as dt
+# import hashlib
+# from scipy.optimize import linear_sum_assignment
+# from scipy.stats import percentileofscore
+# import pandas as pd
+# import urllib.parse
+# from collections import defaultdict
+# from shutil import move
+# import datetime as dt
 from six import iteritems
 import pprint
 
@@ -173,7 +173,6 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
         
     return pdf_file_names
 
-
     
 class CleanAbstracts():
     def __init__(self, txt_paths):
@@ -207,15 +206,6 @@ def meaningful_wrds(text):
             gensim.utils.simple_preprocess(text, deacc=True)
             if wrd not in stop_words]
 
-
-class EditorMessage():
-    """Format message to editor"""
-    def __init__(self, editor_name):
-        self.editor_name = editor_name
-        self.submisions = []
-        
-    def add_submission(self, sumbission_name):
-        self.submissions.append(self.submission_name)
 
 def get_abstract(txt):
     '''
@@ -344,32 +334,4 @@ def get_abstract(txt):
             abstr = None
 
     return abstr
-
-# =============================================================================
-# 
-# 
-# path_list = ['/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts/F/Faccio_Mara_1.txt',
-#              '/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts/F/Faccio_Mara_2.txt',
-#              '/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts/F/Faccio_Mara_3.txt']
-# dictionary = gensim.corpora.Dictionary(CleanAbstracts(path_list))
-# # remove words that appear only once accross all documents
-# once_ids = [tokenid for tokenid, docfreq in iteritems(dictionary.dfs)
-#             if docfreq == 1]
-# dictionary.filter_tokens(once_ids)
-# # remove gaps in ids
-# dictionary.compactify()
-# print(dictionary.token2id)
-# corpus = IterCorpus(path_list)
-# pprint.pprint(list(corpus))
-#     
-# =============================================================================
-
-# =============================================================================
-# os.chdir('/Users/abrefeld/Dropbox/UK/JCF_assignment')
-# extract_abstracts()
-# =============================================================================
-
-# =============================================================================
-# print(CleanAbstracts().meaningful_wrds('Documents document, saving saved, transformative 45^, and other small a an the'))
-# =============================================================================
 

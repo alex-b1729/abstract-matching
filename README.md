@@ -1,5 +1,5 @@
 # NLP Abstract Matching
-Using Natural Language Processing (NLP) to match researchers with interesting papers.  
+Use Natural Language Processing (NLP) to match researchers with interesting papers.  
 
 ## Table of Contents
 * [Development Notes](#developement-notes)

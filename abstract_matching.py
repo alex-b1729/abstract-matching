@@ -103,8 +103,9 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
 
     # find 1 - cosine similarity for each submission
     similarity_vectors = []
-    print('Generating abstract similarity')
+    print('Generating abstract similarity:')
     for query in submission_names:
+        print('\t{}'.format(query))
         with open(os.path.join('papers_to_assign', 'abstract_txts', '{}.txt'.format(query))) as file:
             vec_bow = dictionary.doc2bow(abstrprep.meaningful_wrds(file.read()))
         vec_model = model[vec_bow]
@@ -117,6 +118,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     cost_matrix = np.transpose(1 - np.array(similarity_vectors))
     
     # referee assignments
+    print('Finding potential referees... ', end='')
     # choose ref with highest similarity (lowest cost)
     referee_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='referee'], 
                                    index=sample_df[sample_df['position']=='referee']['fac_index'])
@@ -125,6 +127,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     referee_assignments = np.zeros(referee_cost_matrix.shape)
     # refs can only be assigned to 1 paper
     for i in range(num_refs_to_assign): 
+        print('{}, '.format(i), end='')
         # Assignes each ref to 1 paper using the Hungarian algorithm
         referee_assign_array, paper_assign_array = linear_sum_assignment(referee_cost_matrix)
         for assign_index, paper_col in enumerate(paper_assign_array):
@@ -135,12 +138,14 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
             referee_cost_matrix[referee_row,:] = np.ones((1, referee_cost_matrix.shape[1]))
 
     # assistant editor assignments
+    print('Finding potential assistant editors... ', end='')
     ae_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='assistant_editor'], 
                                    index=sample_df[sample_df['position']=='assistant_editor']['fac_index'])
     ae_cost_matrix = np.array(ae_cost_df.groupby('fac_index').min())
     ae_assignments = np.zeros(ae_cost_matrix.shape)
     # aes can only be assigned 1 paper
     for i in range(num_aes_to_assign):
+        print('{}, '.format(i), end='')
         ae_assign_array, paper_assign_array = linear_sum_assignment(ae_cost_matrix)
         for assign_index, paper_col in enumerate(paper_assign_array):
             if ae_assignments[:,paper_col].sum() < num_aes_to_assign:
@@ -149,7 +154,9 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
                 ae_assignments[ae_row, paper_col] = 1
                 # mark as costly so no 2nd assignment to same ref
                 ae_cost_matrix[ae_row,:] = np.ones((1, ae_cost_matrix.shape[1]))
+    
     # editor assignments
+    print('Assigning editors... ')
     editor_abstr_cost_matrix = cost_matrix[sample_df['position']=='editor']
     editor_assignment_costs = np.ones(editor_abstr_cost_matrix.shape)
     # assign each paper to 5 (arbitrary number) editors 
@@ -183,6 +190,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     names[submission_names] = assignment_matrix
     
     # output assignments
+    print('Generating assigment message. ')
     message = ''
     # find papers assigned to each editor
     for editor_index in range(names[names['position']=='editor'].shape[0]):

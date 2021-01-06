@@ -31,7 +31,7 @@ import datetime as dt
 import abstrprep
 
 
-def main(num_topics, num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use_tfidf=True):
+def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use_tfidf=True):
     # pd.set_option('display.max_rows', 1000)
     # pd.set_option('display.max_columns', 10)
     
@@ -99,7 +99,7 @@ def main(num_topics, num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use
     index = gensim.similarities.MatrixSimilarity(model[corpus])
     
     # convert pdf submissions to txt abstracts
-    submission_names = abstrprep.extract_abstracts()
+    submission_names = abstrprep.extract_abstracts(convert)
 
     # find 1 - cosine similarity for each submission
     similarity_vectors = []

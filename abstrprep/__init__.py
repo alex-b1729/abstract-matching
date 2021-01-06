@@ -68,7 +68,7 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     return dictionary, corpus
 
 
-def extract_abstracts(pdf_dir='papers_to_assign'):
+def extract_abstracts(convert, pdf_dir='papers_to_assign'):
     """Converts pdfs to txt and saves abstracts then returns file names"""
     # xpdf path depends on os
     if platform.startswith('darwin'):
@@ -88,77 +88,87 @@ def extract_abstracts(pdf_dir='papers_to_assign'):
     else:
         # somethings wrong with the paths
         print('Directory not found: {}'.format(pdf_dir_path))
-
-    # pdfs names
-    pdf_file_names = []
-    with os.scandir(pdf_dir_path) as it:
-        for entry in it:
-            if entry.name.endswith('.pdf') and entry.is_file() and not entry.name.startswith('.'):
-                # save file name without extension
-                pdf_file_names.append(entry.name[:-4])
-
-    # find abstracts already converted to txt
-    txt_file_names = []
-    with os.scandir(abstr_txt_dir_path) as it:
-        for entry in it:
-            if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
-                txt_file_names.append(entry.name[:-4])
-
-    # convert each pdf to txt using xpdf tool
-    txt_issues = []
-    abstr_issues = []
-    for paper_name in pdf_file_names:
-        if paper_name not in txt_file_names:
-            pdf_convert_path = os.path.join(pdf_dir_path, '{}.pdf'.format(paper_name))
-            txt_result_path = os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper_name))
-            # convert first 10 pages
-            comd = '{} -l 10 {} {}'.format(shlex.quote(xpdf_path), shlex.quote(pdf_convert_path), shlex.quote(txt_result_path))
-            # get text from .pdf
-            res = subprocess.run(comd, shell=True)
-            # if issue with conversion
-            if res.returncode!=0:
-                txt_issues.append(paper_name)
-            else:
-                # get text of abstract
-                with open(txt_result_path, mode='r+', errors='ignore') as file:
-                    abstr_txt = get_abstract(file.read())
-                    # overwrite txt file with abstract txt if abstract found
-                    if abstr_txt:
-                        file.seek(0)
-                        file.write(abstr_txt)
-                        file.truncate()
-                if not abstr_txt:
-                    os.remove(txt_result_path)
-                    abstr_issues.append(paper_name)
-
-    # if issues with conversion
-    if txt_issues != [] or abstr_issues != []:
-        # txt conversion issues
-        if txt_issues != []:
-            print('Issue converting following .pdf file(s) to .txt:')
-            for paper in txt_issues:
-                print('{}.pdf'.format(paper))
-        # issues finding abstracts
-        if abstr_issues != []:
-            print('Issue extracting abstract from following .txt file(s):')
-            for paper in abstr_issues:
-                print('{}.txt'.format(paper))
-
-        # wait to allow user to manually save txt abstracts
-        input('Please add missing abstracts to abstract_txts directory as a .txt file then press Enter, or Ctrl+C to quit. ')
-
-        # double check that all abstracts are present
-        all_converted = False
-        while not all_converted:
-            any_not_converted = False
-            for paper in pdf_file_names:
-                if not os.path.isfile(os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper))):
-                    print('Abstract file {}.txt not found.'.format(paper))
-                    any_not_converted = True
-            if any_not_converted:
-                input('Please add missing abstracts then press Enter, or Ctrl+C to quit. ')
-            else:
-                all_converted = True
+    
+    # if converting from pdf files
+    if convert:
+        # pdfs names
+        pdf_file_names = []
+        with os.scandir(pdf_dir_path) as it:
+            for entry in it:
+                if entry.name.endswith('.pdf') and entry.is_file() and not entry.name.startswith('.'):
+                    # save file name without extension
+                    pdf_file_names.append(entry.name[:-4])
+    
+        # find abstracts already converted to txt
+        txt_file_names = []
+        with os.scandir(abstr_txt_dir_path) as it:
+            for entry in it:
+                if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
+                    txt_file_names.append(entry.name[:-4])
+    
+        # convert each pdf to txt using xpdf tool
+        txt_issues = []
+        abstr_issues = []
+        for paper_name in pdf_file_names:
+            if paper_name not in txt_file_names:
+                pdf_convert_path = os.path.join(pdf_dir_path, '{}.pdf'.format(paper_name))
+                txt_result_path = os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper_name))
+                # convert first 10 pages
+                comd = '{} -l 10 {} {}'.format(shlex.quote(xpdf_path), shlex.quote(pdf_convert_path), shlex.quote(txt_result_path))
+                # get text from .pdf
+                res = subprocess.run(comd, shell=True)
+                # if issue with conversion
+                if res.returncode!=0:
+                    txt_issues.append(paper_name)
+                else:
+                    # get text of abstract
+                    with open(txt_result_path, mode='r+', errors='ignore') as file:
+                        abstr_txt = get_abstract(file.read())
+                        # overwrite txt file with abstract txt if abstract found
+                        if abstr_txt:
+                            file.seek(0)
+                            file.write(abstr_txt)
+                            file.truncate()
+                    if not abstr_txt:
+                        os.remove(txt_result_path)
+                        abstr_issues.append(paper_name)
+    
+        # if issues with conversion
+        if txt_issues != [] or abstr_issues != []:
+            # txt conversion issues
+            if txt_issues != []:
+                print('Issue converting following .pdf file(s) to .txt:')
+                for paper in txt_issues:
+                    print('{}.pdf'.format(paper))
+            # issues finding abstracts
+            if abstr_issues != []:
+                print('Issue extracting abstract from following .txt file(s):')
+                for paper in abstr_issues:
+                    print('{}.txt'.format(paper))
+    
+            # wait to allow user to manually save txt abstracts
+            input('Please add missing abstracts to abstract_txts directory as a .txt file then press Enter, or Ctrl+C to quit. ')
+    
+            # double check that all abstracts are present
+            all_converted = False
+            while not all_converted:
+                any_not_converted = False
+                for paper in pdf_file_names:
+                    if not os.path.isfile(os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper))):
+                        print('Abstract file {}.txt not found.'.format(paper))
+                        any_not_converted = True
+                if any_not_converted:
+                    input('Please add missing abstracts then press Enter, or Ctrl+C to quit. ')
+                else:
+                    all_converted = True
+                    
+    else:
+        # find abstracts already converted to txt
+        pdf_file_names = []
+        with os.scandir(abstr_txt_dir_path) as it:
+            for entry in it:
+                if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
+                    pdf_file_names.append(entry.name[:-4])
 
     return pdf_file_names
 

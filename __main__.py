@@ -22,8 +22,8 @@ import argparse
 
 from abstract_matching import main
 
-# parser = argparse.ArgumentParser()
-# parser.add_argument('-n', '--no-convert', help='Don\'t convert .pdf files to .txt')
-# args = parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--no-convert', action='store_false', help='Don\'t convert .pdf files to .txt')
+args = parser.parse_args()
 
-main(num_topics=200)
+main(num_topics=200, convert=args.no_convert)

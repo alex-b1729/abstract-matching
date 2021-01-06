@@ -138,7 +138,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
             referee_cost_matrix[referee_row,:] = np.ones((1, referee_cost_matrix.shape[1]))
 
     # assistant editor assignments
-    print('Finding potential assistant editors... ', end='')
+    print('\nFinding potential assistant editors... ', end='')
     ae_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='assistant_editor'], 
                                    index=sample_df[sample_df['position']=='assistant_editor']['fac_index'])
     ae_cost_matrix = np.array(ae_cost_df.groupby('fac_index').min())
@@ -156,7 +156,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
                 ae_cost_matrix[ae_row,:] = np.ones((1, ae_cost_matrix.shape[1]))
     
     # editor assignments
-    print('Assigning editors... ')
+    print('\nAssigning editors... ')
     editor_abstr_cost_matrix = cost_matrix[sample_df['position']=='editor']
     editor_assignment_costs = np.ones(editor_abstr_cost_matrix.shape)
     # assign each paper to 5 (arbitrary number) editors 
@@ -172,7 +172,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     # find sum of costs for each editor for each paper
     editor_assignment_cost_df = pd.DataFrame(editor_assignment_costs, 
                                              index=sample_df[sample_df['position']=='editor']['fac_index'])
-    editor_cost_matrix = np.array(editor_assignment_cost_df.groupby('fac_index').sum())
+    editor_cost_matrix = np.array(editor_assignment_cost_df.groupby('fac_index').sum()) / 5
     editor_assignments = np.zeros(editor_cost_matrix.shape)
     # assign each paper to 1 editor
     while not np.all(editor_cost_matrix == 1):
@@ -190,7 +190,7 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     names[submission_names] = assignment_matrix
     
     # output assignments
-    print('Generating assigment message. ')
+    print('Generating assignment message ')
     message = ''
     # find papers assigned to each editor
     for editor_index in range(names[names['position']=='editor'].shape[0]):
@@ -234,10 +234,14 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     #     for sub in submission_names:
     #         os.remove(os.path.join('papers_to_assign', '{}.pdf'.format(sub)))
     
-    # save message to .txt file with today's date
-    message_path = os.path.join('assignment_results', '{}.txt'.format(td))
+    # save message to .txt
+    dest_dir = os.path.join('assignment_results', td)
+    os.mkdir(dest_dir)
+    message_path = os.path.join(dest_dir, '{}_assignment_msg.txt'.format(td))
     with open(message_path, 'w') as file:
         file.write(message)
+    # save similarity to .csv
+    
     # open message
     subprocess.run(['open', message_path])
 

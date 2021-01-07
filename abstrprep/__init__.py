@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-# Copyright (C) 2020 Alexander Brefeld <alexander.brefeld@protonmail.com>
+# Copyright (C) 2021 Alexander Brefeld <alexander.brefeld@protonmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ from six import iteritems
 import pprint
 
 
-def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
+def gen_dict_corpus(names, data_dir):
     """Returns (dictionary, corpus)"""
     # abstract file relative paths
     abstr_paths = []
@@ -51,7 +51,7 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     # pprint.pprint(probs)
 
     # iterator loads all abstracts
-    dictionary = gensim.corpora.Dictionary(CleanAbstracts(abstr_paths))
+    dictionary = gensim.corpora.Dictionary(CleanAbstracts(abstr_paths, data_dir))
 
     # remove words that appear only once accross all documents
     once_ids = [tokenid for tokenid, docfreq in iteritems(dictionary.dfs)
@@ -63,18 +63,13 @@ def gen_dict_corpus(names, assignment_group_path='assignment_groups'):
     # memory friendly corpus
     # corpus = IterCorpus(abstr_paths, dictionary)
     # not memory friendly corpus
-    corpus = [abstr_samp for abstr_samp in IterCorpus(abstr_paths, dictionary)]
+    corpus = [abstr_samp for abstr_samp in IterCorpus(abstr_paths, dictionary, data_dir)]
 
     return dictionary, corpus
 
 
-def extract_abstracts(convert, pdf_dir='papers_to_assign'):
+def extract_abstracts(convert, pdf_dir, xpdf_dir):
     """Converts pdfs to txt and saves abstracts then returns file names"""
-    # xpdf path depends on os
-    if platform.startswith('darwin'):
-        # mac
-        xpdf_path = os.path.join(os.getcwd(), 'xpdf-tools-mac-4.02', 'bin64', 'pdftotext')
-
     # pdf directory full path
     pdf_dir_path = os.path.join(os.getcwd(), pdf_dir)
     # txt abstract full path
@@ -114,7 +109,7 @@ def extract_abstracts(convert, pdf_dir='papers_to_assign'):
                 pdf_convert_path = os.path.join(pdf_dir_path, '{}.pdf'.format(paper_name))
                 txt_result_path = os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper_name))
                 # convert first 10 pages
-                comd = '{} -l 10 {} {}'.format(shlex.quote(xpdf_path), shlex.quote(pdf_convert_path), shlex.quote(txt_result_path))
+                comd = '{} -l 10 {} {}'.format(shlex.quote(xpdf_dir), shlex.quote(pdf_convert_path), shlex.quote(txt_result_path))
                 # get text from .pdf
                 res = subprocess.run(comd, shell=True)
                 # if issue with conversion
@@ -174,27 +169,29 @@ def extract_abstracts(convert, pdf_dir='papers_to_assign'):
 
 
 class CleanAbstracts():
-    def __init__(self, txt_paths):
+    def __init__(self, txt_paths, data_dir):
         self.txt_paths = txt_paths
+        self.data_dir = data_dir
 
     def __iter__(self):
         for path in self.txt_paths:
             # ADD 'data'
-            with open(os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
+            with open(os.path.join(self.data_dir, 'learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
                 abstr = file.read()
                 yield meaningful_wrds(abstr)
 
 
 class IterCorpus():
     """Memory friendly way to generate corpus"""
-    def __init__(self, txt_paths, dictionary):
+    def __init__(self, txt_paths, dictionary, data_dir):
         self.txt_paths = txt_paths
         self.dictionary = dictionary
+        self.data_dir = data_dir
 
     def __iter__(self):
         for path in self.txt_paths:
             # ADD 'data'
-            with open(os.path.join('/Users/abrefeld/Dropbox/UK/RA_assignments/JCF_summer_2020/Abstract_collection/learning_abstracts', path), encoding='utf-8', errors='ignore') as file:
+            with open(os.path.join(self.data_dir, 'learning_abstracts', path), mode='r', encoding='utf-8', errors='ignore') as file:
                 yield self.dictionary.doc2bow(meaningful_wrds(file.read()))
 
 

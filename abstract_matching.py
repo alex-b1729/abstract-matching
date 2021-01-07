@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-# Copyright (C) 2020 Alexander Brefeld <alexander.brefeld@protonmail.com>
+# Copyright (C) 2021 Alexander Brefeld <alexander.brefeld@protonmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,23 +31,23 @@ import datetime as dt
 import abstrprep
 
 
-def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use_tfidf=True):
+def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='papers_to_assign', data_dir='data', xpdf_dir='xpdf-tools-mac-4.02', num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use_tfidf=True):
     # pd.set_option('display.max_rows', 1000)
     # pd.set_option('display.max_columns', 10)
-    
-    name_path = 'assignment_groups'
+
+    os.chdir(main_dir)
 
     # open name lists
-    editor_names = pd.read_csv(os.path.join(name_path, 'editor_names.csv'))
+    editor_names = pd.read_csv(os.path.join(name_dir, 'editor_names.csv'))
     editor_names['position'] = 'editor'
-    assistant_editor_names = pd.read_csv(os.path.join(name_path, 'assistant_editor_names.csv'))
+    assistant_editor_names = pd.read_csv(os.path.join(name_dir, 'assistant_editor_names.csv'))
     assistant_editor_names['position'] = 'assistant_editor'
-    referee_names = pd.read_csv(os.path.join(name_path, 'referee_names.csv'))
+    referee_names = pd.read_csv(os.path.join(name_dir, 'referee_names.csv'))
     referee_names['position'] = 'referee'
     # full list of names
     names = editor_names.append([assistant_editor_names, referee_names], ignore_index=True)
     # find hash of name lists
-    names_hash = file_hash(os.path.join(name_path, 'editor_names.csv'), os.path.join(name_path, 'assistant_editor_names.csv'), os.path.join(name_path, 'referee_names.csv'))
+    names_hash = file_hash(os.path.join(name_dir, 'editor_names.csv'), os.path.join(name_dir, 'assistant_editor_names.csv'), os.path.join(name_dir, 'referee_names.csv'))
 
     # generate dictionary matching faculty index to name
     fac_index = 0
@@ -74,39 +74,45 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     # load / generate dictionary and corpus
     try:
         # load if exists
-        dictionary = gensim.corpora.Dictionary.load(os.path.join('data', 'dictionaries', '{}.dict'.format(names_hash)))
-        corpus = gensim.corpora.MmCorpus(os.path.join('data', 'corpora', '{}.mm'.format(names_hash)))
+        dictionary = gensim.corpora.Dictionary.load(os.path.join(data_dir, 'dictionaries', '{}.dict'.format(names_hash)))
+        corpus = gensim.corpora.MmCorpus(os.path.join(data_dir, 'corpora', '{}.mm'.format(names_hash)))
     except FileNotFoundError:
         print('Building topic model...')
         # create dictionary & corpus
-        dictionary, corpus = abstrprep.gen_dict_corpus(names)
+        dictionary, corpus = abstrprep.gen_dict_corpus(names, data_dir)
         # save to disk
-        dictionary.save(os.path.join('data', 'dictionaries', '{}.dict'.format(names_hash)))
-        gensim.corpora.MmCorpus.serialize(os.path.join('data', 'corpora', '{}.mm'.format(names_hash)), corpus)
+        if not os.path.isdir(os.path.join(data_dir, 'dictionaries')):
+            os.mkdir(os.path.join(data_dir, 'dictionaries'))
+        dictionary.save(os.path.join(data_dir, 'dictionaries', '{}.dict'.format(names_hash)))
+        if not os.path.isdir(os.path.join(data_dir, 'corpora')):
+            os.mkdir(os.path.join(data_dir, 'corpora'))
+        gensim.corpora.MmCorpus.serialize(os.path.join(data_dir, 'corpora', '{}.mm'.format(names_hash)), corpus)
     
     # load / train model
     try:
-        model = gensim.models.LsiModel.load(os.path.join('data', 'models', '{}.lsi'.format(names_hash)))
+        model = gensim.models.LsiModel.load(os.path.join(data_dir, 'models', '{}.lsi'.format(names_hash)))
     except FileNotFoundError:
         if use_tfidf:
             tfidf = gensim.models.TfidfModel(corpus)
             corpus = tfidf[corpus]
         model = gensim.models.LsiModel(corpus, id2word=dictionary, num_topics=num_topics)
-        model.save(os.path.join('data', 'models', '{}.lsi'.format(names_hash)))
+        if not os.path.isdir(os.path.join(data_dir, 'models')):
+            os.mkdir(os.path.join(data_dir, 'models'))
+        model.save(os.path.join(data_dir, 'models', '{}.lsi'.format(names_hash)))
         
     # transform corups to LSI space and index
     # non-memory friendly corpus solution
     index = gensim.similarities.MatrixSimilarity(model[corpus])
     
     # convert pdf submissions to txt abstracts
-    submission_names = abstrprep.extract_abstracts(convert)
+    submission_names = abstrprep.extract_abstracts(convert, pdf_dir, xpdf_dir)
 
     # find 1 - cosine similarity for each submission
     similarity_vectors = []
     print('Generating abstract similarity:')
     for query in submission_names:
         print('\t{}'.format(query))
-        with open(os.path.join('papers_to_assign', 'abstract_txts', '{}.txt'.format(query))) as file:
+        with open(os.path.join(pdf_dir, 'abstract_txts', '{}.txt'.format(query))) as file:
             vec_bow = dictionary.doc2bow(abstrprep.meaningful_wrds(file.read()))
         vec_model = model[vec_bow]
         sims = index[vec_model]
@@ -123,8 +129,12 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     referee_cost_df = pd.DataFrame(cost_matrix[sample_df['position']=='referee'], 
                                    index=sample_df[sample_df['position']=='referee']['fac_index'])
     referee_cost_matrix = np.array(referee_cost_df.groupby('fac_index').min())
-    
     referee_assignments = np.zeros(referee_cost_matrix.shape)
+    
+    # ref costs to save
+    ref_cost_output = referee_names.copy()
+    ref_cost_output[submission_names] = referee_cost_matrix
+    
     # refs can only be assigned to 1 paper
     for i in range(num_refs_to_assign): 
         print('{}, '.format(i), end='')
@@ -143,6 +153,11 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
                                    index=sample_df[sample_df['position']=='assistant_editor']['fac_index'])
     ae_cost_matrix = np.array(ae_cost_df.groupby('fac_index').min())
     ae_assignments = np.zeros(ae_cost_matrix.shape)
+    
+    # ae costs to save
+    ae_cost_output = assistant_editor_names.copy()
+    ae_cost_output[submission_names] = ae_cost_matrix
+    
     # aes can only be assigned 1 paper
     for i in range(num_aes_to_assign):
         print('{}, '.format(i), end='')
@@ -172,8 +187,14 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     # find sum of costs for each editor for each paper
     editor_assignment_cost_df = pd.DataFrame(editor_assignment_costs, 
                                              index=sample_df[sample_df['position']=='editor']['fac_index'])
-    editor_cost_matrix = np.array(editor_assignment_cost_df.groupby('fac_index').sum()) / 5
+    editor_cost_matrix = np.array(editor_assignment_cost_df.groupby('fac_index').sum())
+    editor_cost_matrix = editor_cost_matrix / editor_cost_matrix.max()
     editor_assignments = np.zeros(editor_cost_matrix.shape)
+    
+    # editor cost df to save
+    editor_cost_output = editor_names.copy()
+    editor_cost_output[submission_names] = editor_cost_matrix
+    
     # assign each paper to 1 editor
     while not np.all(editor_cost_matrix == 1):
         editor_assign_array, paper_assign_array = linear_sum_assignment(editor_cost_matrix)
@@ -187,35 +208,36 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
                 editor_cost_matrix[:,paper_col] = np.ones(editor_cost_matrix.shape[0])
     
     assignment_matrix = np.append(np.append(editor_assignments, ae_assignments, axis=0), referee_assignments, axis=0)
-    names[submission_names] = assignment_matrix
+    assignment_df = names.copy()
+    assignment_df[submission_names] = assignment_matrix
     
     # output assignments
     print('Generating assignment message ')
     message = ''
     # find papers assigned to each editor
-    for editor_index in range(names[names['position']=='editor'].shape[0]):
-        editor_firstname = names['firstname'].iloc[editor_index]
+    for editor_index in range(assignment_df[assignment_df['position']=='editor'].shape[0]):
+        editor_firstname = assignment_df['firstname'].iloc[editor_index]
         num_assignments = 0
         # check for paper assignments
         for submission in submission_names:
             # if paper assigned to editor
-            if names[submission].iloc[editor_index] == 1:
+            if assignment_df[submission].iloc[editor_index] == 1:
                 if num_assignments == 0:
-                    message += f'Dear {editor_firstname}, \nThis week, you were matched to the following papers: \n\n'
+                    message += f'Dear {editor_firstname}, \nThis week you were matched to the following papers: \n'
                 num_assignments += 1
-                message += f'Manuscript: {submission}\n'
+                message += f'\nManuscript: {submission}\n'
                 # suggested assistant editors
-                ae_suggestions = names[(names['position']=='assistant_editor') & (names[submission]==1)]
+                ae_suggestions = assignment_df[(assignment_df['position']=='assistant_editor') & (assignment_df[submission]==1)]
                 ae_name_list = []
                 for row in ae_suggestions.itertuples():
                     ae_name_list.append('{} {}'.format(row[2].capitalize(), row[1].capitalize()))
-                message += 'Assistant Editor Ideas:\t{}\n'.format('\n\t\t\t'.join(ae_name_list))
+                message += 'Assistant Editor Ideas:\n\t\t{}\n'.format('\n\t\t'.join(ae_name_list))
                 # suggested refs
-                ref_suggestions = names[(names['position']=='referee') & (names[submission]==1)]
+                ref_suggestions = assignment_df[(assignment_df['position']=='referee') & (assignment_df[submission]==1)]
                 ref_name_list = []
                 for row in ref_suggestions.itertuples():
                     ref_name_list.append('{} {}'.format(row[2].capitalize(), row[1].capitalize()))
-                message += 'Referee Ideas:\t{}\n\n'.format('\n\t\t'.join(ref_name_list))
+                message += 'Referee Ideas:\n\t\t{}\n'.format('\n\t\t'.join(ref_name_list))
         # space between editor messages
         if num_assignments != 0:
             message += '\n{}\n\n'.format('/'*80)
@@ -223,7 +245,8 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     # move txt abstracts to previous directory
     td = str(dt.date.today())
     dest_dir = os.path.join('previous_abstracts', td)
-    os.mkdir(dest_dir)
+    if not os.path.isdir(dest_dir):
+        os.mkdir(dest_dir)
     for sub in submission_names:
         current_dir = os.path.join('papers_to_assign', 'abstract_txts')
         os.rename(os.path.join(current_dir, '{}.txt'.format(sub)), os.path.join(dest_dir, '{}.txt'.format(sub)))
@@ -236,11 +259,19 @@ def main(num_topics, convert, num_refs_to_assign=8, num_aes_to_assign=2, model='
     
     # save message to .txt
     dest_dir = os.path.join('assignment_results', td)
-    os.mkdir(dest_dir)
-    message_path = os.path.join(dest_dir, '{}_assignment_msg.txt'.format(td))
+    if not os.path.isdir(dest_dir):
+        os.mkdir(dest_dir)
+    message_path = os.path.join(dest_dir, 'assignment_msg_{}.txt'.format(td))
     with open(message_path, 'w') as file:
         file.write(message)
     # save similarity to .csv
+    all_samp_costs = sample_df.copy()
+    all_samp_costs[submission_names] = cost_matrix
+    all_samp_costs.to_csv(os.path.join(dest_dir, 'all_abstr_costs_{}.csv'.format(td)))
+    
+    ref_cost_output.to_csv(os.path.join(dest_dir, 'ref_costs_{}.csv'.format(td)))
+    ae_cost_output.to_csv(os.path.join(dest_dir, 'ae_costs_{}.csv'.format(td)))
+    editor_cost_output.to_csv(os.path.join(dest_dir, 'editor_costs_{}.csv'.format(td)))
     
     # open message
     subprocess.run(['open', message_path])
@@ -256,4 +287,15 @@ def file_hash(*args, block_size=262144):
                 hash_func.update(data_block)
                 data_block = f.read(block_size)
     return hash_func.hexdigest()
+
+
+
+
+
+
+
+
+
+
+
 

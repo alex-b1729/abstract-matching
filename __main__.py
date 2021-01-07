@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-# Copyright (C) 2020 Alexander Brefeld <alexander.brefeld@protonmail.com>
+# Copyright (C) 2021 Alexander Brefeld <alexander.brefeld@protonmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,11 +19,26 @@
 
 
 import argparse
+import os
+import sys
 
 from abstract_matching import main
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--no-convert', action='store_false', help='Don\'t convert .pdf files to .txt')
+parser.add_argument('-n', '--no-convert', action='store_false', help='Don\'t convert .pdf files to .txt. ')
+parser.add_argument('-D', '--cwd', help='Set main working directory. ')
+parser.add_argument('-x', '--xpdf', help='Set path to xpdf. ')
 args = parser.parse_args()
 
-main(num_topics=200, convert=args.no_convert)
+if args.cwd is not None:
+    main_dir = args.cwd
+else:
+    main_dir = os.getcwd()
+    
+if args.xpdf is not None:
+    xpdf_path = args.xpdf
+else:
+    if sys.platform.startswith('darwin'):
+        xpdf_path = 'xpdf-tools-mac-4.02'
+
+main(num_topics=200, convert=args.no_convert, main_dir=main_dir, xpdf_dir=xpdf_path)

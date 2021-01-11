@@ -69,7 +69,7 @@ def gen_dict_corpus(names, data_dir):
 
 
 def extract_abstracts(convert, pdf_dir, xpdf_dir):
-    """Converts pdfs to txt and saves abstracts then returns file names"""
+    """Converts pdfs to txt and saves abstracts then returns dictionary of file names and paper titles."""
     # pdf directory full path
     pdf_dir_path = os.path.join(os.getcwd(), pdf_dir)
     # txt abstract full path
@@ -104,6 +104,8 @@ def extract_abstracts(convert, pdf_dir, xpdf_dir):
         # convert each pdf to txt using xpdf tool
         txt_issues = []
         abstr_issues = []
+        # matches .txt file name with paper name
+        title_dict = {}
         for paper_name in pdf_file_names:
             if paper_name not in txt_file_names:
                 pdf_convert_path = os.path.join(pdf_dir_path, '{}.pdf'.format(paper_name))
@@ -118,7 +120,11 @@ def extract_abstracts(convert, pdf_dir, xpdf_dir):
                 else:
                     # get text of abstract
                     with open(txt_result_path, mode='r+', errors='ignore') as file:
-                        abstr_txt = get_abstract(file.read())
+                        title, abstr_txt = get_abstract(file.read())
+                        if title is not None:
+                            title_dict[paper_name] = title
+                        else:
+                            raise Exception('No title found for manuscript {}'.format(paper_name))
                         # overwrite txt file with abstract txt if abstract found
                         if abstr_txt:
                             file.seek(0)
@@ -164,7 +170,7 @@ def extract_abstracts(convert, pdf_dir, xpdf_dir):
                 if entry.name.endswith('.txt') and entry.is_file() and not entry.name.startswith('.'):
                     pdf_file_names.append(entry.name[:-4])
 
-    return pdf_file_names
+    return title_dict
 
 
 class CleanAbstracts():

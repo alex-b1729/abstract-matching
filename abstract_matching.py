@@ -105,7 +105,8 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
     index = gensim.similarities.MatrixSimilarity(model[corpus])
     
     # convert pdf submissions to txt abstracts
-    submission_names = abstrprep.extract_abstracts(convert, pdf_dir, xpdf_dir)
+    submission_names_dict = abstrprep.extract_abstracts(convert, pdf_dir, xpdf_dir)
+    submission_names = list(submission_names_dict.keys())
 
     # find 1 - cosine similarity for each submission
     similarity_vectors = []
@@ -225,7 +226,7 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
                 if num_assignments == 0:
                     message += f'Dear {editor_firstname}, \nThis week you were matched to the following papers: \n'
                 num_assignments += 1
-                message += f'\nManuscript: {submission}\n'
+                message += '\nManuscript: {}\n'.format(submission_names_dict[submission])
                 # suggested assistant editors
                 ae_suggestions = assignment_df[(assignment_df['position']=='assistant_editor') & (assignment_df[submission]==1)]
                 ae_name_list = []

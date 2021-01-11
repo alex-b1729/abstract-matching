@@ -109,7 +109,7 @@ def extract_abstracts(convert, pdf_dir, xpdf_dir):
                 pdf_convert_path = os.path.join(pdf_dir_path, '{}.pdf'.format(paper_name))
                 txt_result_path = os.path.join(abstr_txt_dir_path, '{}.txt'.format(paper_name))
                 # convert first 10 pages
-                comd = '{} -l 10 {} {}'.format(shlex.quote(xpdf_dir), shlex.quote(pdf_convert_path), shlex.quote(txt_result_path))
+                comd = '{} -l 10 {} {}'.format(shlex.quote(os.path.join(xpdf_dir, 'bin64', 'pdftotext')), shlex.quote(pdf_convert_path), shlex.quote(txt_result_path))
                 # get text from .pdf
                 res = subprocess.run(comd, shell=True)
                 # if issue with conversion
@@ -125,7 +125,6 @@ def extract_abstracts(convert, pdf_dir, xpdf_dir):
                             file.write(abstr_txt)
                             file.truncate()
                     if not abstr_txt:
-                        os.remove(txt_result_path)
                         abstr_issues.append(paper_name)
     
         # if issues with conversion
@@ -205,128 +204,25 @@ def meaningful_wrds(text):
 
 def get_abstract(txt):
     '''
-    Attempts to extract abstract from text of paper by searching for the
-    word 'abstract' then taking everything untill the next newline char.
-
-    Sometimes keywords are on the same line as the abstract so if 'keywords:'
-    appears before the first newline char the abstract is assumed to end there.
-
-    In some cases the abstract covers multiple lines.  If the function finds
-    that the first new line char appears within the first 120 characters
-    then it searches for the first appearance of 'keywords:', 'we thank',
-    'the authors thank', or 'jel classification' and assumes abstract texts
-    ends there.
-
-    Also attempts to find and include keywords and jel classifications.
-
-    Parameters: txt (str): paper text
-
-    Returns: str or None if no abstract found
-
-    Honastly this function is a mess but so far words as needed...
-
-    Still needs work: isn't accurite as needed when abstract doesn't appear
-    but finds jel classifications
+    Extracts abstract and paper title from .txt file and returns (title, abstract). 
     '''
-
     abstr = None
+    txt = txt[:3000]
+    paragraphs = [t.strip() for t in txt.split('\n')]
+    
+    if '--Manuscript Draft--' in paragraphs:
+        md_loc = paragraphs.index('--Manuscript Draft--')
+        title = paragraphs[md_loc-1]
+        
+        # abstract should be first "long" paragraph after 'manuscript draft'
+        abstr_found = False
+        num_to_check = md_loc + 1
+        while not abstr_found and num_to_check<=len(paragraphs):
+            # paragraph assumed to be abstract if longer than 300 characters
+            if len(paragraphs[num_to_check]) > 300:
+                abstr = paragraphs[num_to_check]
+                abstr_found = True
+            num_to_check += 1
+    
+    return title, abstr            
 
-    # reg expression to find jel classifications
-    jels = re.search('JEL.*:\s([A-Z]{1}[0-9]{1,2})[,;A-Z 0-9]+', txt[:3000])
-    if jels:
-        all_jel = []
-        if ',' in jels[0]:
-            jels = jels[0].split(',')
-            for jel in jels:
-                if ':' in jel:
-                    tem = jel.split(':')
-                    jel = tem[1].strip()
-                else:
-                    jel = jel.strip()
-                if not jel[-1].isnumeric():
-                    jel = jel[:-1]
-                all_jel.append(jel.strip())
-            jels = ' '.join(all_jel)
-        else:
-            jels = jels[0].split(';')
-            for jel in jels:
-                if ':' in jel:
-                    tem = jel.split(':')
-                    jel = tem[1].strip()
-                else:
-                    jel = jel.strip()
-                if not jel[-1].isnumeric():
-                    jel = jel[:-1]
-                all_jel.append(jel.strip())
-            jels = ' '.join(all_jel)
-
-    txt = txt.lower()
-
-    loc = txt.find('abstract')
-    # if found in txt
-    if loc != -1:
-        # text after appearance of 'abstract'
-        txt = txt[loc+8:].strip()
-        if any(x in txt for x in ['keywords:', 'key words:']):
-            kwrd_1 = txt.find('keywords:')
-            kwrd_2 = txt.find('key words:')
-            kwrd = max(kwrd_1, kwrd_2)
-            end = txt.find('\n', kwrd+5)
-            txt = txt[:end]
-            if 'jel' in txt:
-                end = txt.find('jel')
-                if end < kwrd and (kwrd-end) < 50:
-                    first = txt[:end]
-                    last = txt[kwrd:]
-                    txt = ' '.join([first, last])
-                else:
-                    txt = txt[:end]
-            kwrd_1 = txt.find('keywords:')
-            kwrd_2 = txt.find('key words:')
-            kwrd = max(kwrd_1, kwrd_2)
-            txt = ' '.join([txt[:kwrd], txt[kwrd+9:]])
-
-        else:
-            end = txt.find('\n', 10)
-            if end < 120:
-                if any(x in txt.lower() for x in ['keywords:', 'jel classification', 'we thank', 'the authors thank', 'the authors are']):
-                    kwrd = txt.find('keywords:')
-                    if kwrd == -1:
-                        kwrd = 10000
-                    jelly = txt.find('jel classification')
-                    if jelly == -1:
-                        jelly = 10000
-                    thx = txt.find('we thank')
-                    if thx == -1:
-                        thx = 10000
-                    auth_thx = txt.find('the authors thank')
-                    if auth_thx == -1:
-                        auth_thx = 10000
-                    auth_are = txt.find('the authors are')
-                    if auth_are == -1:
-                        auth_are = 10000
-                    end = min(kwrd, jelly, thx, auth_thx, auth_are)
-                    txt = txt[:end].strip()
-                else:
-                    txt = None
-            else:
-                txt = txt[:end].strip()
-            if txt:
-                if 'keywords:' in txt:
-                    end = txt.find('keywords:')
-                    txt = txt[:end]
-        abstr = txt
-
-    if jels:
-        if abstr:
-            abstr = '{} {}'.format(abstr,jels)
-        else:
-            abstr = jels
-
-    # issue if abstract is too long or short
-    if abstr:
-        abstr_wrds = len(abstr.split())
-        if abstr_wrds < 50 or abstr_wrds > 200:
-            abstr = None
-
-    return abstr

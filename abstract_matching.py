@@ -263,17 +263,41 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
     if not os.path.isdir(dest_dir):
         os.mkdir(dest_dir)
     message_path = os.path.join(dest_dir, 'assignment_msg_{}.txt'.format(td))
-    with open(message_path, 'w') as file:
-        file.write(message)
+    # don't overwrite previous file if run twice in same day
+    written = False
+    tries = 1
+    while not written and tries<6:
+        if not os.path.isfile(message_path):
+            with open(message_path, 'w') as file:
+                file.write(message)
+                written = True
+        else:
+            message_path = os.path.join(dest_dir, 'assignment_msg_{}_{}.txt'.format(td, tries))
+            tries += 1
+    
     # save similarity to .csv
     all_samp_costs = sample_df.copy()
     all_samp_costs[submission_names] = cost_matrix
-    all_samp_costs.to_csv(os.path.join(dest_dir, 'all_abstr_costs_{}.csv'.format(td)))
-    
-    ref_cost_output.to_csv(os.path.join(dest_dir, 'ref_costs_{}.csv'.format(td)))
-    ae_cost_output.to_csv(os.path.join(dest_dir, 'ae_costs_{}.csv'.format(td)))
-    editor_cost_output.to_csv(os.path.join(dest_dir, 'editor_costs_{}.csv'.format(td)))
-    
+    written = False
+    tries = 1
+    all_samp_path = os.path.join(dest_dir, 'all_abstr_costs_{}.csv'.format(td))
+    ref_cost_path = os.path.join(dest_dir, 'ref_costs_{}.csv'.format(td))
+    ae_cost_path = os.path.join(dest_dir, 'ae_costs_{}.csv'.format(td))
+    e_cost_path = os.path.join(dest_dir, 'editor_costs_{}.csv'.format(td))
+    while not written and tries<6:
+        if not os.path.isfile(all_samp_path):
+            all_samp_costs.to_csv(all_samp_path, mode='x')
+            ref_cost_output.to_csv(ref_cost_path, mode='x')
+            ae_cost_output.to_csv(ae_cost_path, mode='x')
+            editor_cost_output.to_csv(e_cost_path, mode='x')
+            written = True
+        else:
+            all_samp_path = os.path.join(dest_dir, 'all_abstr_costs_{}_{}.csv'.format(td, tries))
+            ref_cost_path = os.path.join(dest_dir, 'ref_costs_{}_{}.csv'.format(td, tries))
+            ae_cost_path = os.path.join(dest_dir, 'ae_costs_{}_{}.csv'.format(td, tries))
+            e_cost_path = os.path.join(dest_dir, 'editor_costs_{}_{}.csv'.format(td, tries))
+            tries += 1
+        
     # open message
     subprocess.run(['open', message_path])
 

@@ -285,6 +285,7 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
     ref_cost_path = os.path.join(dest_dir, 'ref_costs_{}.csv'.format(td))
     ae_cost_path = os.path.join(dest_dir, 'ae_costs_{}.csv'.format(td))
     e_cost_path = os.path.join(dest_dir, 'editor_costs_{}.csv'.format(td))
+    sub_names_path = os.path.join(dest_dir, 'submission_dictionary_{}.txt'.format(td))
     while not written and tries<6:
         if not os.path.isfile(all_samp_path):
             assignment_df.to_csv(assignment_df_path, mode='x')
@@ -292,6 +293,8 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
             ref_cost_output.to_csv(ref_cost_path, mode='x')
             ae_cost_output.to_csv(ae_cost_path, mode='x')
             editor_cost_output.to_csv(e_cost_path, mode='x')
+            with open(sub_names_path, 'w') as f:
+                print(submission_names_dict, file=f)
             written = True
         else:
             assignment_df_path = os.path.join(dest_dir, 'assignments_{}_{}.csv'.format(td, tries))
@@ -299,6 +302,7 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
             ref_cost_path = os.path.join(dest_dir, 'ref_costs_{}_{}.csv'.format(td, tries))
             ae_cost_path = os.path.join(dest_dir, 'ae_costs_{}_{}.csv'.format(td, tries))
             e_cost_path = os.path.join(dest_dir, 'editor_costs_{}_{}.csv'.format(td, tries))
+            sub_names_path = os.path.join(dest_dir, 'submission_dictionary_{}_{}.txt'.format(td, tries))
             tries += 1
         
     # open message

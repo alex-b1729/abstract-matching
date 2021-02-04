@@ -31,7 +31,7 @@ import datetime as dt
 import abstrprep
 
 
-def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='papers_to_assign', data_dir='data', xpdf_dir='xpdf-tools-mac-4.02', num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use_tfidf=True):
+def main(num_topics, convert, main_dir, sig_path, name_dir='assignment_groups', pdf_dir='papers_to_assign', data_dir='data', xpdf_dir='xpdf-tools-mac-4.02', num_refs_to_assign=8, num_aes_to_assign=2, model='lsi', use_tfidf=True):
     # pd.set_option('display.max_rows', 1000)
     # pd.set_option('display.max_columns', 10)
 
@@ -211,20 +211,36 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
     assignment_matrix = np.append(np.append(editor_assignments, ae_assignments, axis=0), referee_assignments, axis=0)
     assignment_df = names.copy()
     assignment_df[submission_names] = assignment_matrix
+    # number of assignments to each name
+    assignment_df['num_assigned'] = assignment_df.sum(axis=1)
     
     # output assignments
     print('Generating assignment message ')
+    
+    # open email signature if any
+    sig = ''
+    if sig_path is not None:
+        if os.path.isfile(sig_path):
+            with open(sig_path, 'r') as f:
+                sig = f.read()
+        else:
+            print(f'{sig_path} is not a valid system path.  \nProceeding without email signature.  ')
+    
     message = ''
     # find papers assigned to each editor
     for editor_index in range(assignment_df[assignment_df['position']=='editor'].shape[0]):
         editor_firstname = assignment_df['firstname'].iloc[editor_index]
-        num_assignments = 0
+        num_assignments = assignment_df['num_assigned'].iloc[editor_index]
+        # set singular / plural for message
+        sing_plur = ''
+        if num_assignments>1:
+            sing_plur = 's'
         # check for paper assignments
         for submission in submission_names:
             # if paper assigned to editor
             if assignment_df[submission].iloc[editor_index] == 1:
                 if num_assignments == 0:
-                    message += f'Dear {editor_firstname}, \nThis week you were matched to the following papers: \n'
+                    message += f'Dear {editor_firstname}, \nThis week you were matched to the following paper{sing_plur}: \n'
                 num_assignments += 1
                 message += '\nManuscript: {}\n'.format(submission_names_dict[submission])
                 # suggested assistant editors
@@ -241,7 +257,7 @@ def main(num_topics, convert, main_dir, name_dir='assignment_groups', pdf_dir='p
                 message += 'Referee Ideas:\n\t\t{}\n'.format('\n\t\t'.join(ref_name_list))
         # space between editor messages
         if num_assignments != 0:
-            message += '\n{}\n\n'.format('/'*80)
+            message += '{}\n{}\n\n'.format(sig, '/'*80)
     
     # move txt abstracts to previous directory
     td = str(dt.date.today())

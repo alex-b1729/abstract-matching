@@ -28,6 +28,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--no-convert', action='store_false', help='Don\'t convert .pdf files to .txt. ')
 parser.add_argument('-D', '--cwd', help='Set main working directory. ')
 parser.add_argument('-x', '--xpdf', help='Set path to xpdf. ')
+parser.add_argument('-S', '--signature_path', help='Path to .txt email signature')
+parser.add_argument('-s', '--signature', action='store_true', help='Include default email signature.', default=False)
 args = parser.parse_args()
 
 if args.cwd is not None:
@@ -40,5 +42,13 @@ if args.xpdf is not None:
 else:
     if sys.platform.startswith('darwin'):
         xpdf_path = 'xpdf-tools-mac-4.02'
+        
+if args.signature_path is not None:
+    sig_path = args.signature_path
 
-main(num_topics=200, convert=args.no_convert, main_dir=main_dir, xpdf_dir=xpdf_path)
+if args.signature:
+    sig_path = 'data/email_signature.txt'
+else:
+    sig_path = None
+
+main(num_topics=200, convert=args.no_convert, main_dir=main_dir, sig_path=args.signature_path, xpdf_dir=xpdf_path)

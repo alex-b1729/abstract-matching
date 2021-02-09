@@ -29,7 +29,7 @@ parser.add_argument('-n', '--no-convert', action='store_false', help='Don\'t con
 parser.add_argument('-D', '--cwd', help='Set main working directory. ')
 parser.add_argument('-x', '--xpdf', help='Set path to xpdf. ')
 parser.add_argument('-S', '--signature_path', help='Path to .txt email signature')
-parser.add_argument('-s', '--signature', action='store_true', help='Include default email signature.', default=False)
+parser.add_argument('-s', '--signature', action='store_true', help='Include default email signature.')
 args = parser.parse_args()
 
 if args.cwd is not None:
@@ -51,4 +51,4 @@ if args.signature:
 else:
     sig_path = None
 
-main(num_topics=200, convert=args.no_convert, main_dir=main_dir, sig_path=args.signature_path, xpdf_dir=xpdf_path)
+main(num_topics=200, convert=args.no_convert, main_dir=main_dir, sig_path=sig_path, xpdf_dir=xpdf_path)

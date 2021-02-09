@@ -230,10 +230,11 @@ def main(num_topics, convert, main_dir, sig_path, name_dir='assignment_groups', 
     # find papers assigned to each editor
     for editor_index in range(assignment_df[assignment_df['position']=='editor'].shape[0]):
         editor_firstname = assignment_df['firstname'].iloc[editor_index]
-        num_assignments = assignment_df['num_assigned'].iloc[editor_index]
+        numassigned = assignment_df['num_assigned'].iloc[editor_index]
+        num_assignments = 0
         # set singular / plural for message
         sing_plur = ''
-        if num_assignments>1:
+        if numassigned>1.5:
             sing_plur = 's'
         # check for paper assignments
         for submission in submission_names:
@@ -257,7 +258,7 @@ def main(num_topics, convert, main_dir, sig_path, name_dir='assignment_groups', 
                 message += 'Referee Ideas:\n\t\t{}\n'.format('\n\t\t'.join(ref_name_list))
         # space between editor messages
         if num_assignments != 0:
-            message += '{}\n{}\n\n'.format(sig, '/'*80)
+            message += '\n{}\n\n{}\n\n'.format(sig, '/'*80)
     
     # move txt abstracts to previous directory
     td = str(dt.date.today())
